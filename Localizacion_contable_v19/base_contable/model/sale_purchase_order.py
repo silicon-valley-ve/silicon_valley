@@ -58,7 +58,7 @@ class PurchaseOrder(models.Model):
         for order in self:
             # Buscamos líneas que tengan un producto asignado Y que no tengan impuestos (taxes_id es Many2many)
             lines_without_tax = order.order_line.filtered(
-                lambda line: line.product_id and not line.taxes_id
+                lambda line: line.product_id and not line.tax_ids
             )
             
             if lines_without_tax:
@@ -137,7 +137,7 @@ class SaleOrder(models.Model):
         for order in self:
             # Buscamos líneas que tengan un producto asignado Y que no tengan impuestos (tax_id es Many2many)
             lines_without_tax = order.order_line.filtered(
-                lambda line: line.product_id and not line.tax_id
+                lambda line: line.product_id and not line.tax_ids
             )
             
             if lines_without_tax:

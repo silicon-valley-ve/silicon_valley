@@ -22,6 +22,7 @@
         'sale',
         'purchase',
         'stock_account',
+        'sale_stock',
         ],
 
     # always loaded
@@ -33,17 +34,16 @@
         'vista/res_company_inherit.xml',
         'vista/res_users.xml',
         'vista/account_move_views.xml',###
-        
-        
-        #'vista/modo_pago_view.xml',
-        #'vista/product_inherit_views.xml',
-        #'wizard/pago.xml',
-        #'vista/account_paiment_register_view.xml',
-        #'vista/purchase_inherit.xml',
-        #'wizar_report_igtf/wizard.xml',
-        #'wizar_report_igtf/reporte_view.xml',
+        'wizard/pago.xml',
+        'vista/modo_pago_view.xml',
+        'vista/product_inherit_views.xml',
+        'vista/account_paiment_register_view.xml',
+        'vista/sale_inherit.xml',
+        'vista/purchase_inherit.xml',
+        'wizar_report_igtf/wizard.xml',
+        'wizar_report_igtf/reporte_view.xml',
         'security/ir.model.access.csv',
-        #'vista/sale_inherit.xml',
+        
         #'vista/stock_valuation_layer_base.xml',
 
         ##'data/data.xml',

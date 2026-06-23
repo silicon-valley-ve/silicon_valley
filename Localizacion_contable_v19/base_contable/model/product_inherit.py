@@ -79,7 +79,7 @@ class Productos(models.Model):
                 self.tasa_dia=det.inverse_company_rate
 
 
-    @api.onchange('standard_price_usd')
+    @api.onchange('standard_price')
     def actualiza_coste(self):
         for selff in self:
             var_tasa=selff.tasa_dia
