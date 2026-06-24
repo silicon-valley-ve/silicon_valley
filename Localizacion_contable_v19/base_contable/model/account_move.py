@@ -351,13 +351,13 @@ class AccountMove(models.Model):
                 if lines_with_zero_or_negative_price:
                     # Construimos un mensaje de error detallado
                     product_names = ', '.join(lines_with_zero_or_negative_price.mapped('product_id.display_name'))
-                    move._log_and_raise_fiscal_error("🛑 Productos con precio cero/negativo: %s" % product_names)
-                    """raise UserError(_(
+                    #move._log_and_raise_fiscal_error("🛑 Productos con precio cero/negativo: %s" % product_names)
+                    raise UserError(_(
                         "🛑 No se puede publicar la factura."
                         "\nLos siguientes productos tienen un Precio (cero o negativo) o un descuento del 100 porciento:"
                         "\n%s"
                         "\n\nPor favor, corrija los precios o descuentos e intente publicar de nuevo."
-                    ) % product_names)"""
+                    ) % product_names)
 
 
     def _validate_product_taxes(self):
@@ -732,26 +732,26 @@ class  AccountMoveLine(models.Model):
                     #raise UserError(_("original_qty %s, credit_note_qty %s")%(original_qty,credit_note_qty))
                     
                     if credit_note_qty > original_qty:
-                        """raise ValidationError(_(
+                        raise ValidationError(_(
                             "VALIDACIÓN SENIAT: La Cantidad (%s) de la línea '%s' no puede ser superior "
                             "a la cantidad de la factura afectada (%s) (Factura: %s)."
-                        ) % (credit_note_qty, line.name, original_qty, original_invoice.name))"""
+                        ) % (credit_note_qty, line.name, original_qty, original_invoice.name))
 
-                        move._log_and_raise_fiscal_error("VALIDACIÓN SENIAT: La Cantidad (%s) de la línea '%s' no puede ser superior "
-                            "a la cantidad de la factura afectada (%s) (Factura: %s)." % (credit_note_qty, line.name, original_qty, original_invoice.name))
+                        #move._log_and_raise_fiscal_error("VALIDACIÓN SENIAT: La Cantidad (%s) de la línea '%s' no puede ser superior "
+                            #"a la cantidad de la factura afectada (%s) (Factura: %s)." % (credit_note_qty, line.name, original_qty, original_invoice.name))
                     
                     # 4. Validar Precio Unitario
                     original_price = original_line.price_unit
                     credit_note_price = line.price_unit
 
                     if credit_note_price > original_price:
-                        """raise ValidationError(_(
+                        raise ValidationError(_(
                             "VALIDACIÓN SENIAT: El Precio Unitario (%.2f) de la línea '%s' no puede ser superior "
                             "al precio unitario de la factura afectada (%.2f) (Factura: %s)."
-                        ) % (credit_note_price, line.name, original_price, original_invoice.name))"""
+                        ) % (credit_note_price, line.name, original_price, original_invoice.name))
 
-                        move._log_and_raise_fiscal_error("VALIDACIÓN SENIAT: El Precio Unitario (%.2f) de la línea '%s' no puede ser superior "
-                            "al precio unitario de la factura afectada (%.2f) (Factura: %s)." % (credit_note_price, line.name, original_price, original_invoice.name))
+                        #move._log_and_raise_fiscal_error("VALIDACIÓN SENIAT: El Precio Unitario (%.2f) de la línea '%s' no puede ser superior "
+                            #"al precio unitario de la factura afectada (%.2f) (Factura: %s)." % (credit_note_price, line.name, original_price, original_invoice.name))
 
     # ESTA FUNCION VALIDA QUE NO SE AGREGUEN PRODUCTOS NUEVOS EN LA NC DE CLEINETES SI NO ESTAN EN LA FACTURA AFECTADA
     @api.constrains('product_id')
@@ -775,11 +775,11 @@ class  AccountMoveLine(models.Model):
                                 ban=1
 
                 if ban==0:
-                    """raise UserError(_("🛑 VALIDACIÓN SENIAT: El producto/descripción *%s* no pertenece a la factura afectada *%s*"
-                    " No se Permiten agregar productos que no hayan sido previamente facturados. ")% (line.product_id.name, original_invoice.name))"""
+                    raise UserError(_("🛑 VALIDACIÓN SENIAT: El producto/descripción *%s* no pertenece a la factura afectada *%s*"
+                    " No se Permiten agregar productos que no hayan sido previamente facturados. ")% (line.product_id.name, original_invoice.name))
 
-                    move_id._log_and_raise_fiscal_error("🛑 VALIDACIÓN SENIAT: El producto/descripción *%s* no pertenece a la factura afectada *%s*"
-                    " No se Permiten agregar productos que no hayan sido previamente facturados." % (line.product_id.name, original_invoice.name))
+                    #move_id._log_and_raise_fiscal_error("🛑 VALIDACIÓN SENIAT: El producto/descripción *%s* no pertenece a la factura afectada *%s*"
+                    #" No se Permiten agregar productos que no hayan sido previamente facturados." % (line.product_id.name, original_invoice.name))
 
 
 
