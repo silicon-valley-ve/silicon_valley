@@ -84,39 +84,13 @@ class LibroVentasModelo(models.Model):
     def doc_cedula(self,aux):
         #nro_doc=self.partner_id.vat
         nro_doc="00000000"
-        tipo_doc="V"
         busca_partner = self.env['res.partner'].search([('id','=',aux)])
         for det in busca_partner:
-            tipo_doc=det.doc_tipo
             if det.vat:
                 nro_doc=str(det.vat)
             else:
                 nro_doc="00000000"
-        nro_doc=nro_doc.replace('V','')
-        nro_doc=nro_doc.replace('v','')
-        nro_doc=nro_doc.replace('E','')
-        nro_doc=nro_doc.replace('e','')
-        nro_doc=nro_doc.replace('G','')
-        nro_doc=nro_doc.replace('g','')
-        nro_doc=nro_doc.replace('J','')
-        nro_doc=nro_doc.replace('j','')
-        nro_doc=nro_doc.replace('P','')
-        nro_doc=nro_doc.replace('p','')
-        nro_doc=nro_doc.replace('-','')
-        
-        if tipo_doc=="v":
-            tipo_doc="V"
-        if tipo_doc=="e":
-            tipo_doc="E"
-        if tipo_doc=="g":
-            tipo_doc="G"
-        if tipo_doc=="j":
-            tipo_doc="J"
-        if tipo_doc=="p":
-            tipo_doc="P"
-        if tipo_doc=="c":
-            tipo_doc="C"
-        resultado=str(tipo_doc)+str(nro_doc)
+        resultado=str(nro_doc)
         return resultado
 
 class libro_ventas(models.TransientModel):
@@ -194,35 +168,8 @@ class libro_ventas(models.TransientModel):
         #nro_doc=self.partner_id.vat
         busca_partner = self.env['res.partner'].search([('id','=',aux)])
         for det in busca_partner:
-            tipo_doc=det.doc_tipo
             nro_doc=str(det.vat)
-        nro_doc=nro_doc.replace('V','')
-        nro_doc=nro_doc.replace('v','')
-        nro_doc=nro_doc.replace('E','')
-        nro_doc=nro_doc.replace('e','')
-        nro_doc=nro_doc.replace('G','')
-        nro_doc=nro_doc.replace('g','')
-        nro_doc=nro_doc.replace('J','')
-        nro_doc=nro_doc.replace('j','')
-        nro_doc=nro_doc.replace('P','')
-        nro_doc=nro_doc.replace('p','')
-        nro_doc=nro_doc.replace('c','')
-        nro_doc=nro_doc.replace('C','')
-        nro_doc=nro_doc.replace('-','')
-        
-        if tipo_doc=="v":
-            tipo_doc="V"
-        if tipo_doc=="e":
-            tipo_doc="E"
-        if tipo_doc=="g":
-            tipo_doc="G"
-        if tipo_doc=="j":
-            tipo_doc="J"
-        if tipo_doc=="p":
-            tipo_doc="P"
-        if tipo_doc=="c":
-            tipo_doc="C"
-        resultado=str(tipo_doc)+str(nro_doc)
+        resultado=str(nro_doc)
         return resultado
         
     def get_invoice(self,accion):
@@ -394,7 +341,7 @@ class libro_ventas(models.TransientModel):
         col = 0
         ws1.row(row).height = 500
         ws1.write_merge(row, row, 2, 4,  str(self.company_id.name), header_content_style)
-        rif="R.I.F: "+self.company_id.partner_id.doc_tipo+"-"+self.company_id.partner_id.vat
+        rif="R.I.F: "+self.company_id.partner_id.vat
         ws1.write_merge(row, row, 5, 6,  rif, header_content_style)
         row=row+1
         ws1.write_merge(row, row, 2, 4,  "Libro de Ventas", header_content_style)

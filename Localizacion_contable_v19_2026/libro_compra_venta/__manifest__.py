@@ -28,9 +28,9 @@
         'security/ir.model.access.csv',
         'view/account_move_view.xml',
         'wizards_compras/wizard_libro_compras.xml',
-        #'reports/libro_compras.xml',
+        'reports/libro_compras.xml',
         'wizards_ventas/wizard_libro_ventas.xml',
-        #'reports/libro_ventas.xml',
+        'reports/libro_ventas.xml',
         
         ],  
     # only loaded in demonstration mode
