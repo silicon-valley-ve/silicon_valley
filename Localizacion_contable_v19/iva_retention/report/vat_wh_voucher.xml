@@ -397,7 +397,7 @@
 
                         <br/>
 
-                        <table width="100%" class="table table-borderless table-sm">
+                        <!--table width="100%" class="table table-borderless table-sm">
                           <tr>
                             <td width="72%">&amp;nbsp;</td>
                             <td><div align="center">
@@ -410,7 +410,7 @@
                                 </div>
                             </td>
                           </tr>
-                        </table>
+                        </table-->
 
                         <style>
                             hr {
@@ -429,7 +429,7 @@
                                 <!--table style="width:100%;margin-top:50px;" name="firmas"-->
                                     <tr>
                                         <td style="width:50%;text-align:center;padding:0px;margin:0px;">
-                                            <div style="position: absolute; left: 240px; top: 475px; z-index: 1;">
+                                            <div style="position: absolute; left: 240px; top: 435px; z-index: 1;">
                                                 <t t-if="o.create_uid.sign_signature"> 
                                                   <img t-attf-src="data:image/*;base64,{{o.create_uid.sign_signature}}" style="width:auto; height:100px;"/>
                                                 </t>
@@ -438,7 +438,10 @@
                                             <div class="row justify-content-center">
                                                 <div class="border-bottom border-dark border-1" style="max-width: 450px;"/>
                                             </div>
-                                            <b><span t-esc="o.create_uid.partner_id.name"/></b>
+                                            <b>
+                                                <!--span t-esc="o.create_uid.partner_id.name"/-->
+                                                <span t-esc="o.company_id.name"/>
+                                            </b>
                                             <br/>
                                             <b>Agente de Retención</b>
                                             <br/>

@@ -19,7 +19,7 @@ class RetentionVat(models.Model):
     name = fields.Char(string='Voucher number', default='00000000')
     # datos del proveedor
     partner_id = fields.Many2one('res.partner', string='Partner')
-    rif = fields.Char(string='RIF')
+    rif = fields.Char(string='RIF',compute='_compute_rif')
     # datos de emision y entrega del comprobante
     accouting_date = fields.Date(string='Accounting date', help='Voucher generation date', readonly=True)
     voucher_delivery_date = fields.Date(string='Voucher delivery date')
@@ -65,6 +65,9 @@ class RetentionVat(models.Model):
         self.create_asiento()
         if self.invoice_id.amount_residual!=0:
             self.create_conciliacion_ret_iva()
+
+    def _compute_rif(self):
+        self.rif= self.partner_id.vat
 
 
     def create_asiento(self):
