@@ -120,8 +120,9 @@
                         </style>
 
                         
-
-                        <table class="thicker-border-table" style="width: 100%;">
+                        <br/>
+                        <!--table class="thicker-border-table" style="width: 100%;"-->
+                        <table style="width: 100%;">
                           <tr>
                             <td width="64%">
                                 &amp;nbsp;
@@ -145,8 +146,8 @@
                             </td>
                           </tr>
                           <tr>
-                            <td>
-                                <table width="100%" name="inta">
+                            <td align="center">
+                                <table width="98%" name="inta">
                                   <tr>
                                     <td style="text-align: center; font-size:9px; background-color:#F2F2F2;">
                                         NOMBRES Y APELLIDOS O RAZÓN SOCIAL DEL AGENTE DE RETENCIÓN:
