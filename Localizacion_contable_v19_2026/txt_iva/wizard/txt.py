@@ -73,7 +73,7 @@ def rif_format(partner_id):
     nro_doc = '*****' 
     if partner_id.vat:
         nro_doc=partner_id.vat    
-    resultado=str(nro_doc)
+    resultado=str(nro_doc.replace('-', ''))
     return resultado
     #raise UserError(_('cedula: %s')%resultado)
 
