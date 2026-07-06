@@ -13,4 +13,4 @@ class ResCompany(models.Model):
     _inherit = 'res.company'
 
     
-    x_ruta_txt_iva = fields.Char(default='/opt/odoo/data/txt_generacion.txt')
+    x_ruta_txt_iva = fields.Char(default='/home/odoo/src/txt_generacion.txt')
