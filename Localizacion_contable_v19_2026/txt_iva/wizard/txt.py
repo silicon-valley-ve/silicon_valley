@@ -71,34 +71,9 @@ def formato_periodo(valor):
 
 def rif_format(partner_id):
     nro_doc = '*****' 
-    tipo_doc='?'
     if partner_id.vat:
-        nro_doc=partner_id.vat
-        tipo_doc=partner_id.doc_tipo
-    nro_doc=nro_doc.replace('V','')
-    nro_doc=nro_doc.replace('v','')
-    nro_doc=nro_doc.replace('E','')
-    nro_doc=nro_doc.replace('e','')
-    nro_doc=nro_doc.replace('G','')
-    nro_doc=nro_doc.replace('g','')
-    nro_doc=nro_doc.replace('J','')
-    nro_doc=nro_doc.replace('j','')
-    nro_doc=nro_doc.replace('P','')
-    nro_doc=nro_doc.replace('p','')
-    nro_doc=nro_doc.replace('-','')
-    if tipo_doc=="v":
-        tipo_doc="V"
-    if tipo_doc=="e":
-        tipo_doc="E"
-    if tipo_doc=="g":
-        tipo_doc="G"
-    if tipo_doc=="j":
-        tipo_doc="J"
-    if tipo_doc=="p":
-        tipo_doc="P"
-    if tipo_doc=="c":
-        tipo_doc="C"
-    resultado=str(tipo_doc)+str(nro_doc)
+        nro_doc=partner_id.vat    
+    resultado=str(nro_doc)
     return resultado
     #raise UserError(_('cedula: %s')%resultado)
 
