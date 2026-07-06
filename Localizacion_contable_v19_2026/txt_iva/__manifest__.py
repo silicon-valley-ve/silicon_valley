@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 {
-    'name': "Archivo txt iva proveedores seniat v18",
+    'name': "Archivo txt iva proveedores seniat v19",
 
-    'summary': """Archivo txt iva proveedores seniat v18""",
+    'summary': """Archivo txt iva proveedores seniat v19""",
 
     'description': """
        Archivo txt iva proveedores seniat
     """,
     'version': '18.0',
-    'author': 'Ing. Darrell Sojo / Alianza Frank Service',
+    'author': 'Ing. Darrell Sojo',
     'category': 'Tools',
 
     # any module necessary for this one to work correctly
