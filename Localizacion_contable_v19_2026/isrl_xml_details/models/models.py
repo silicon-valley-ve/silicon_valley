@@ -139,7 +139,7 @@ class WiizarXml(models.TransientModel):
                 else :
                     doc += str(item.partner_id.vat)"""
                 if item.partner_id.vat:
-                    doc = str(item.partner_id.vat)
+                    doc = str(item.partner_id.vat.replace('-', ''))
                 linea = self.env['account.xml.detalle.line'].create({
                 'rif_retenido': str(doc),
                 'numero_factura': str(item.invoice_id.invoice_number_next),
