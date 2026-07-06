@@ -18,7 +18,7 @@
         'account',
         'account_accountant',
         'iva_retention',
-        'resumen_alicuota_libros',
+        'libro_compra_venta',
     ],
 
     # always loaded
