@@ -49,6 +49,7 @@ class AccountMove(models.Model):
                                         ####
                                         #raise UserError("prueba 1")
                                         ban=selff.verifica_islr_repetido(rate.code)
+                                        verifica_comp_ante=selff.verf_comp_repetidos_periodo()
                                         if ban==False:
                                             direcc=({
                                                 'name': item.concept_isrl_id.id,
@@ -57,8 +58,8 @@ class AccountMove(models.Model):
                                                 'cantidad': rate.retention_percentage,
                                                 'base': selff.conv_div_nac(base),
                                                 'retention': selff.conv_div_nac(subtotal),
-                                                'sustraendo': rate.subtract,
-                                                'total': selff.conv_div_nac(subtotal) - rate.subtract,
+                                                'sustraendo': rate.subtract if verifica_comp_ante==False else 0,
+                                                'total': selff.conv_div_nac(subtotal) - rate.subtract if verifica_comp_ante==False else selff.conv_div_nac(subtotal),
                                             })
                                             selff.isrl_ret_id.lines_id.create(direcc)
                                         else:
@@ -66,14 +67,44 @@ class AccountMove(models.Model):
                                             objeto_line.write({
                                                 'base': objeto_line.base+selff.conv_div_nac(base),
                                                 'retention': objeto_line.retention+selff.conv_div_nac(subtotal),
-                                                'total': objeto_line.retention+selff.conv_div_nac(subtotal) - rate.subtract,
+                                                'total': objeto_line.retention+selff.conv_div_nac(subtotal) - rate.subtract if selff.conv_div_nac(subtotal)==False else objeto_line.retention+selff.conv_div_nac(subtotal),
                                                 })
                         if selff.move_type in ('in_invoice','in_refund','in_receipt'):
                             selff.isrl_ret_id.action_post()
                             selff.isrl_ret_aux_id = selff.isrl_ret_id.name
 
 
+    def verf_comp_repetidos_periodo(self):
+        """
+        Verifica si existen comprobantes de retención de ISLR previos
+        para el mismo proveedor, el mismo mes y año (basado en invoice_date)
+        y la misma compañía.
+        Retorna True si existe al menos uno, de lo contrario False.
+        """
+        self.ensure_one()
+        
+        # Si la factura no tiene fecha asignada aún, usamos la fecha de hoy por seguridad
+        fecha_factura = self.invoice_date or fields.Date.context_today(self)
+        
+        # Calculamos el primer y último día del mes de la factura
+        primer_dia_mes = fecha_factura.replace(day=1)
+        ultimo_dia_mes = fecha_factura + relativedelta(day=31)
+        
+        # Buscamos si existe algún comprobante en el modelo principal 'isrl.retention'
+        comprobante_existente = self.env['isrl.retention'].search([
+            ('partner_id', '=', self.partner_id.id),
+            ('company_id', '=', self.company_id.id),
+            ('date_isrl', '>=', primer_dia_mes),
+            ('date_isrl', '<=', ultimo_dia_mes),
+            # Opcional: Si deseas que solo busque comprobantes válidos y no borradores o viceversa, 
+            # puedes descomentar la siguiente línea:
+            ('state', '=', 'done') 
+        ], limit=1) # Usamos limit=1 por optimización de rendimiento en base de datos
+        
+        # Si encuentra un registro devuelve True, si viene vacío devuelve False
+        return bool(comprobante_existente)
 
+        
     def conv_div_nac(self,valor):
         if self.currency_id==self.company_id.currency_id:
             resultado=valor
