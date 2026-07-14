@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 {
-    'name': "Odoo Financial Reports: Currency Filter | Account Report in Multiple Currencies | Account Reports Multi Currency (Original)  19",
+    'name': "Informes financieros de Odoo: Filtro de moneda | Informe contable en múltiples monedas | Informes contables multimoneda (Original)  19",
 
-    'summary': """Odoo Financial Reports: Currency Filter | Account Report in Multiple Currencies | Account Reports Multi Currency (Original)  19""",
+    'summary': """Informes financieros de Odoo: Filtro de moneda | Informe contable en múltiples monedas | Informes contables multimoneda (Original)  19""",
 
     'description': """
-       Odoo Financial Reports: Currency Filter | Account Report in Multiple Currencies | Account Reports Multi Currency (Original)  19
+       Informes financieros de Odoo: Filtro de moneda | Informe contable en múltiples monedas | Informes contables multimoneda (Original)  19
        Colaborador: Ing. Darrell Sojo
     """,
     'version': '18.0',
