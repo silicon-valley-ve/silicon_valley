@@ -8,9 +8,9 @@
     'email': 'dotsprime@gmail.com',
     'support': 'sales@dotsprime.com',
     "website":'https://dotsprime.com/',
-    "license": 'OPL-1',
+    #"license": 'OPL-1',
     'price': 11.75,
-    'currency': 'EUR',
+    'currency': 'USD',
     "description": """
         Empower your accounting team with enhanced financial reporting by enabling multiple currency support 
         across key financial statements such as Balance Sheet, Profit and Loss, Cash Flow Statement, Executive Summary, Tax Return, General Ledger, Trail Balance, Journal Audit, Check Register, Partner Ledger, Aged Receivable, Aged Payable.
@@ -51,8 +51,6 @@
     'images': ['static/description/main_screenshot.png'],
     "live_test_url" : "https://youtu.be/2CzQSQYa33g",
     'demo': [],
-    'installable': True,
-    'auto_install': False,
     'application': True,
 }
 
