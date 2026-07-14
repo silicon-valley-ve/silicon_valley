@@ -19,12 +19,18 @@
         'account',
         'account_accountant',
         'account_debit_note',
+        'account_reports',
         ],
 
     # always loaded
     'data': [
         
     ],
+    "assets": {
+        "web.assets_backend": [
+            "dps_account_report_filter/static/src/components/**/*",
+        ],
+    },
     'application': True,
     'license': 'OEEL-1',
 }
