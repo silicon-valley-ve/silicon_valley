@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <template id="ilp_report_layout_head" inherit_id="web.report_layout">
+        <xpath expr="//head/script" position="after">
+            <t t-if="company.ilp_css">
+                <style type="text/css" t-out="company.ilp_css"/>
+            </t>
+        </xpath>
+    </template>
+
+    <template id="report_invoice_document_ilp_inline" inherit_id="account.report_invoice_document">
+        <!-- <tr> du thead pour le fond de base (fallback) -->
+        <xpath expr="//table[@name='invoice_line_table']//thead/tr" position="attributes">
+            <attribute name="t-attf-style">background-color: #{o.company_id.ilp_th_bg_color or '#2c3e50'} !important; color: #{o.company_id.ilp_th_text_color or '#ffffff'} !important; font-weight: 600;</attribute>
+        </xpath>
+        <!-- Chaque <th> individuellement (inline style priorité absolue) -->
+        <xpath expr="//th[@name='th_description']" position="attributes">
+            <attribute name="t-attf-style">background-color: #{o.company_id.ilp_th_bg_color or '#2c3e50'} !important; color: #{o.company_id.ilp_th_text_color or '#ffffff'} !important; font-weight: 600;</attribute>
+        </xpath>
+        <xpath expr="//th[@name='th_quantity']" position="attributes">
+            <attribute name="t-attf-style">background-color: #{o.company_id.ilp_th_bg_color or '#2c3e50'} !important; color: #{o.company_id.ilp_th_text_color or '#ffffff'} !important; font-weight: 600;</attribute>
+        </xpath>
+        <xpath expr="//th[@name='th_priceunit']" position="attributes">
+            <attribute name="t-attf-style">background-color: #{o.company_id.ilp_th_bg_color or '#2c3e50'} !important; color: #{o.company_id.ilp_th_text_color or '#ffffff'} !important; font-weight: 600;</attribute>
+        </xpath>
+        <xpath expr="//th[@name='th_discount']" position="attributes">
+            <attribute name="t-attf-style">background-color: #{o.company_id.ilp_th_bg_color or '#2c3e50'} !important; color: #{o.company_id.ilp_th_text_color or '#ffffff'} !important; font-weight: 600;</attribute>
+        </xpath>
+        <xpath expr="//th[@name='th_taxes']" position="attributes">
+            <attribute name="t-attf-style">background-color: #{o.company_id.ilp_th_bg_color or '#2c3e50'} !important; color: #{o.company_id.ilp_th_text_color or '#ffffff'} !important; font-weight: 600;</attribute>
+        </xpath>
+        <xpath expr="//th[@name='th_subtotal']" position="attributes">
+            <attribute name="t-attf-style">background-color: #{o.company_id.ilp_th_bg_color or '#2c3e50'} !important; color: #{o.company_id.ilp_th_text_color or '#ffffff'} !important; font-weight: 600;</attribute>
+        </xpath>
+    </template>
+
+    <template id="report_invoice_document_ilp" inherit_id="account.report_invoice_document">
+        <xpath expr="//div[@id='payment_term']" position="after">
+            <t t-if="o.company_id.ilp_legal_mode != 'html' and o.company_id.ilp_legal_terms and not is_html_empty(o.company_id.ilp_legal_terms)">
+                <div class="mt-4 pt-3" style="border-top:1px solid #dee2e6;font-size:10px;color:#555;">
+                    <t t-out="o.company_id.ilp_legal_terms"/>
+                </div>
+            </t>
+            <t t-if="o.company_id.ilp_legal_mode == 'html' and o.company_id.ilp_legal_html">
+                <div class="mt-4 pt-3" style="border-top:1px solid #dee2e6;font-size:10px;color:#555;">
+                    <t t-out="o.company_id.ilp_legal_html"/>
+                </div>
+            </t>
+        </xpath>
+    </template>
+
+    <template id="report_invoice_wizard_preview_ilp" inherit_id="web.report_invoice_wizard_preview">
+        <!-- CSS réactif : valeurs directes avec fallbacks pour instances fraîches.
+             Les fallbacks correspondent aux defaults des champs Char.
+             td * / td strong nécessaires : company CSS a une règle explicite
+             sur strong (color:white) sans !important qui bat l'héritage de td. -->
+        <xpath expr="//table[@name='invoice_line_table']" position="before">
+            <style type="text/css">
+                .o_main_table thead th {
+                    background-color: <t t-esc="company.ilp_th_bg_color or '#2c3e50'"/> !important;
+                    color: <t t-esc="company.ilp_th_text_color or '#ffffff'"/> !important;
+                    font-weight: 600;
+                }
+                h2 { color: <t t-esc="company.ilp_title_color or '#2c3e50'"/> !important; }
+                .o_total_table .o_total td,
+                .o_total_table .o_total td *,
+                .o_total_table .o_total td strong,
+                .o_total_table .o_total td span,
+                .o_total_table tr:last-child td,
+                .o_total_table tr:last-child td *,
+                .o_total_table tr:last-child td strong {
+                    background-color: <t t-esc="company.ilp_total_bg_color or '#ecf0f1'"/> !important;
+                    color: <t t-esc="company.ilp_total_text_color or '#2c3e50'"/> !important;
+                    font-weight: 600;
+                }
+                #informations .col &gt; div, #informations .col &gt; span {
+                    color: <t t-esc="company.primary_color or '#000000'"/> !important;
+                }
+                <t t-if="company.ilp_custom_css"><t t-out="company.ilp_custom_css"/></t>
+            </style>
+        </xpath>
+        <!-- Mentions légales sous le résumé de paiement -->
+        <xpath expr="//div[@id='payment_term']" position="after">
+            <t t-if="company.ilp_legal_mode != 'html' and company.ilp_legal_terms and not is_html_empty(company.ilp_legal_terms)">
+                <div class="mt-4 pt-3" style="border-top:1px solid #dee2e6;font-size:10px;color:#333;">
+                    <t t-out="company.ilp_legal_terms"/>
+                </div>
+            </t>
+        </xpath>
+    </template>
+
+</odoo>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="assets_ilp" inherit_id="web.assets_backend">
+        <xpath expr="." position="inside">
+            <script type="module" src="/invoice_layout_pro/static/src/js/color_field_patch.js"/>
+        </xpath>
+    </template>
+</odoo>

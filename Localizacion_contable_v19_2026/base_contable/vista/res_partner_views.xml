@@ -16,6 +16,7 @@
                 <field name="people_type" string="Tipo de Persona" required='True' />
                 <field name="seniat_url" string="Dirección SENIAT" />
                 <field name="partner_type" string="Origen" />
+                <!--field name="mobile" string="Teléfono Celular" /-->
             </xpath>
         </field>
     </record>

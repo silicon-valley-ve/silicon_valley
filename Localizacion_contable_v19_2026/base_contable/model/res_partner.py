@@ -34,6 +34,7 @@ class Partner(models.Model):
 
     # Campo nativo computado
     vat = fields.Char(compute='_compute_vat', store=True, readonly=False)
+    mobile = fields.Char(string='Teléfono Celular')
 
     @api.depends('doc_tipo', 'vat_aux')
     def _compute_vat(self):
