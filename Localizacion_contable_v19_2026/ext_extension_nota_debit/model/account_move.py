@@ -48,5 +48,5 @@ class AccountMove(models.Model):
                 move.line_ids.invalidate_recordset(fnames=['date'])
 
                 # Tu lógica adicional de alícuotas
-                """for det in move.alicuota_line_ids:
-                    det.fecha_fact = move.date_nota_credito"""
+                for det in move.alicuota_line_ids:
+                    det.fecha_fact = move.date_nota_credito
