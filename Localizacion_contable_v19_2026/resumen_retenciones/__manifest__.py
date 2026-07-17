@@ -11,6 +11,7 @@
     'author': 'Ing. Darrell Sojo',
     'category': 'Tools',
     'website': 'dsojo.tanfe@gmail.com',
+    'license': 'LGPL-3',
 
     # any module necessary for this one to work correctly
     'depends': ['base','account','iva_retention','isrl_retention','libro_compra_venta','base_contable'],
@@ -25,6 +26,7 @@
         'resumen_islr/wizard.xml',
         'resumen_islr/reporte_view.xml',
     ],
+    'installable': True,
     'application': True,
     'active':False,
     'auto_install': False,
