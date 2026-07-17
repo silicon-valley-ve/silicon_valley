@@ -6,7 +6,7 @@
         <field name="inherit_id" ref="base.view_partner_form" />
         <field name="arch" type="xml">
             <xpath expr="/form/sheet/group/group[2]/field[@name='function']" position="after">
-                <field name="mobile"/>
+                <field name="mobile" widget="phone" options="{'enable_sms': True}"/>
             </xpath>
             <xpath expr="//field[@name='vat']" position="replace" >
                 <field name="doc_tipo" string="Tipo Doc." />
