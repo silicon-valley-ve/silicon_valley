@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 {
-    'name': "Reportes de reumen  de retenciones IVA e ISLR v17",
+    'name': "Reportes de reumen  de retenciones IVA e ISLR v19",
 
-    'summary': """Reportes de resumen de retenciones V17""",
+    'summary': """Reportes de resumen de retenciones V19""",
 
     'description': """
-       Reportes de resumenes de retenciones IVA, Municipal e ISLR V17.
+       Reportes de resumenes de retenciones IVA, e ISLR V19.
     """,
     'version': '15.0',
     'author': 'Ing. Darrell Sojo',
@@ -13,7 +13,7 @@
     'website': 'dsojo.tanfe@gmail.com',
 
     # any module necessary for this one to work correctly
-    'depends': ['base','account','iva_retention','isrl_retention','resumen_alicuota_libros','base_contable'],
+    'depends': ['base','account','iva_retention','isrl_retention','libro_compra_venta','base_contable'],
 
     # always loaded
     'data': [
