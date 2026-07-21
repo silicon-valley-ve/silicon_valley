@@ -88,7 +88,7 @@ class AccountMove(models.Model):
         
         # Calculamos el primer y último día del mes de la factura
         primer_dia_mes = fecha_factura.replace(day=1)
-        ultimo_dia_mes = fecha_factura + relativedelta(day=31)
+        ultimo_dia_mes = fecha_factura + relativedelta(day=30)
         
         # Buscamos si existe algún comprobante en el modelo principal 'isrl.retention'
         comprobante_existente = self.env['isrl.retention'].search([
