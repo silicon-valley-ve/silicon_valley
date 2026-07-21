@@ -21,8 +21,58 @@ class AccountMove(models.Model):
         self.create_retention()
             #self.unifica_alicuota_iguales_islr()
 
-
     def create_retention(self):
+        for selff in self:
+            ban=0
+            ban=selff.verifica_lineas_islr()
+            if selff.move_type !='entry':
+                if selff.partner_id.ret_agent_isrl==True and not self.isrl_ret_id.id and ban!=0:
+                    if selff.partner_id.people_type=='na':
+                        raise UserError("Defina en la ficha del cliente/Proveedor el tipo de persona")
+                    else:
+                        selff.isrl_ret_id = selff.env['isrl.retention'].create({
+                            'invoice_id': selff.id,
+                            'partner_id': selff.partner_id.id,
+                            #'move_id':self.id,
+                            'invoice_number':selff.invoice_number_next,
+                            'date_move':selff.date,
+                            'date_isrl':selff.date,
+                            'type':selff.move_type,
+                        })
+                        for item in selff.invoice_line_ids:
+                            if item.concept_isrl_id:
+                                for rate in item.concept_isrl_id.rate_ids:
+                                    if selff.partner_id.people_type == rate.people_type and  selff.conv_div_nac(item.price_subtotal) > rate.min  :
+                                        base = item.price_subtotal * (rate.subtotal / 100)
+                                        subtotal =  base * (rate.retention_percentage / 100)
+                                        ####
+                                        #raise UserError("prueba 1")
+                                        ban=selff.verifica_islr_repetido(rate.code)
+                                        if ban==False:
+                                            direcc=({
+                                                'name': item.concept_isrl_id.id,
+                                                'code':rate.code,
+                                                'retention_id': selff.isrl_ret_id.id,
+                                                'cantidad': rate.retention_percentage,
+                                                'base': selff.conv_div_nac(base),
+                                                'retention': selff.conv_div_nac(subtotal),
+                                                'sustraendo': rate.subtract,
+                                                'total': selff.conv_div_nac(subtotal) - rate.subtract,
+                                            })
+                                            selff.isrl_ret_id.lines_id.create(direcc)
+                                        else:
+                                            objeto_line=selff.env['isrl.retention.invoice.line'].search([('retention_id','=',selff.isrl_ret_id.id),('code','=',rate.code)])
+                                            objeto_line.write({
+                                                'base': objeto_line.base+selff.conv_div_nac(base),
+                                                'retention': objeto_line.retention+selff.conv_div_nac(subtotal),
+                                                'total': objeto_line.retention+selff.conv_div_nac(subtotal) - rate.subtract,
+                                                })
+                        if selff.move_type in ('in_invoice','in_refund','in_receipt'):
+                            selff.isrl_ret_id.action_post()
+                            selff.isrl_ret_aux_id = selff.isrl_ret_id.name
+
+                            
+    def create_retention_silicon(self):
         for selff in self:
             ban=0
             ban=selff.verifica_lineas_islr()
