@@ -35,6 +35,8 @@ class ResCompany(models.Model):
 
     enpoint_emision = fields.Char(string="Endpoint Emisión", copy=False, default='/documents/createandapprove')
     enpoint_ultimo_doc = fields.Char(string="Endpoint Último Documento", copy=False)
+    seriestrongid = fields.Char(string="SerieStrOngid") 
+
 
     def unidg_get_token(self):
         """Genera el hash SHA-512 de la contraseña y solicita el Token JWT a Unidigital."""
