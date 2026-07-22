@@ -25,6 +25,8 @@
                   <field name="codigo" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
                 </group>
                 <group name="group_right_unid">
+                  <button name="unidg_get_token" string="Validar Token" type="object" invisible="usar_fact_digi==False"/>
+                  <button name="limpia" string="Limpiar" type="object" invisible="usar_fact_digi==False"/>
                 </group>
               </group>
             </page>

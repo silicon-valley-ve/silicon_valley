@@ -37,8 +37,10 @@ class ResCompany(models.Model):
     enpoint_emision=fields.Char(string="Enpoint Emision",copy=False,default='/api/Emision')
     enpoint_ultimo_doc=fields.Char(string="Enpoint Ultimo Documento",copy=False)
 
+    def unidg_get_token(self):
+        pass
 
-    def tfhka_get_token(self):
+    def unidg_get_token_hh(self):
         """
         Genera y retorna el token JWT para la compañía actual.
         Si el token es válido, lo usa. Si no, solicita uno nuevo a la API.
