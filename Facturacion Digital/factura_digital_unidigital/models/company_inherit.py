@@ -118,5 +118,5 @@ class ResCompany(models.Model):
     def limpia(self):
         self.codigo=''
         self.mensaje=''
-        self.tfhka_jwt_token=''
-        self.tfhka_token_expiry=''
+        self.unidg_jwt_token=''
+        self.unidg_token_expiry=''
