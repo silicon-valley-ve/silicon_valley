@@ -17,7 +17,7 @@ class ResCompany(models.Model):
     
     # Campo para seleccionar el ambiente de la API (Producción o Demo)
     usar_fact_digi = fields.Boolean(default=False)
-    tfhka_environment = fields.Selection([
+    unidg_environment = fields.Selection([
         ('demo', 'DEMO'),
         ('prod', 'PRODUCCIÓN'),
     ], string='Ambiente TFHKA', default='demo', required=True)
@@ -25,12 +25,12 @@ class ResCompany(models.Model):
     # Campos para las credenciales de la Imprenta Digital
     enpoint = fields.Char(string="Enpoint autenticación",copy=False)
     url = fields.Char(string="URL",copy=False)
-    tfhka_api_user = fields.Char(string='Usuario API TFHKA')
-    tfhka_api_password = fields.Char(string='Clave API TFHKA')
+    unidg_api_user = fields.Char(string='Usuario API TFHKA')
+    unidg_api_password = fields.Char(string='Clave API TFHKA')
     
     # Campo para almacenar el token JWT y su vigencia (opcional, pero útil)
-    tfhka_jwt_token = fields.Char(string='Token JWT Actual', readonly=True, copy=False)
-    tfhka_token_expiry = fields.Char(string='Vigencia del Token', readonly=True, copy=False)
+    unidg_jwt_token = fields.Char(string='Token JWT Actual', readonly=True, copy=False)
+    unidg_token_expiry = fields.Char(string='Vigencia del Token', readonly=True, copy=False)
     codigo = fields.Char(readonly=True, copy=False)
     mensaje = fields.Char(readonly=True, copy=False)
 
