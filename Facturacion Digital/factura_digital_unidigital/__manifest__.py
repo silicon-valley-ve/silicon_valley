@@ -8,7 +8,7 @@
         'summary': '',
         'description': """""",
         'category': 'Customizations',
-        'depends': ['base','account'],
+        'depends': ['base','account','base_contable'],
         'data': [
                 'views/company_views.xml',
                 #'views/account_move_views.xml',
