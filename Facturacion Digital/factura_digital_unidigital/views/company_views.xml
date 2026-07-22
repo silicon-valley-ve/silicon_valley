@@ -18,12 +18,13 @@
 
                   <field name="unidg_api_password" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
 
-                  <field name="unidg_jwt_token" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
+                  <field name="unidg_jwt_token" invisible="usar_fact_digi==False"/>
 
-                  <field name="mensaje" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
+                  <field name="mensaje" invisible="usar_fact_digi==False" />
 
-                  <field name="codigo" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
+                  <field name="codigo" invisible="usar_fact_digi==False" />
                 </group>
+
                 <group name="group_right_unid">
                   <button name="unidg_get_token" string="Validar Token" type="object" invisible="usar_fact_digi==False"/>
                   <button name="limpia" string="Limpiar" type="object" invisible="usar_fact_digi==False"/>

@@ -23,10 +23,10 @@ class ResCompany(models.Model):
     ], string='Ambiente TFHKA', default='demo', required=True)
 
     # Campos para las credenciales de la Imprenta Digital
-    enpoint = fields.Char(string="Enpoint autenticación",copy=False)
-    url = fields.Char(string="URL",copy=False)
-    unidg_api_user = fields.Char(string='Usuario API TFHKA')
-    unidg_api_password = fields.Char(string='Clave API TFHKA')
+    enpoint = fields.Char(string="Enpoint autenticación",copy=False,default="/user/login")
+    url = fields.Char(string="URL",copy=False,default='https://qa.unidigital.global/digitalinvoice-core')
+    unidg_api_user = fields.Char(string='Usuario API ',default="siliconvalleyvzla@unidigital.global")
+    unidg_api_password = fields.Char(string='Clave API', default="1VTYmLZs0,cKt8;1J67#")
     
     # Campo para almacenar el token JWT y su vigencia (opcional, pero útil)
     unidg_jwt_token = fields.Char(string='Token JWT Actual', readonly=True, copy=False)
