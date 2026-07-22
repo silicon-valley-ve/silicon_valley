@@ -37,10 +37,10 @@ class ResCompany(models.Model):
     enpoint_emision=fields.Char(string="Enpoint Emision",copy=False,default='/api/Emision')
     enpoint_ultimo_doc=fields.Char(string="Enpoint Ultimo Documento",copy=False)
 
-    def unidg_get_token(self):
+    def unidg_get_token_vacio(self):
         pass
 
-    def unidg_get_token_hh(self):
+    def unidg_get_token(self):
         """
         Genera y retorna el token JWT para la compañía actual.
         Si el token es válido, lo usa. Si no, solicita uno nuevo a la API.
@@ -55,8 +55,8 @@ class ResCompany(models.Model):
         url = url_base + self.enpoint
         
         # 2. Obtener credenciales
-        usuario = self.tfhka_api_user
-        clave = self.tfhka_api_password
+        usuario = self.unidg_api_user
+        clave = self.unidg_api_password
         
         if not usuario or not clave:
             raise UserError(_("Las credenciales de usuario y clave de la API de TFHKA deben estar configuradas en la Compañía."))
@@ -68,7 +68,7 @@ class ResCompany(models.Model):
         
         headers = {'Content-Type': 'application/json'}
         
-        _logger.info("Intentando obtener Token TFHKA para la compañía %s", self.name)
+        _logger.info("Intentando obtener Token Unidigital para la compañía %s", self.name)
         
         try:
             # 3. Solicitud POST a la API
@@ -85,15 +85,15 @@ class ResCompany(models.Model):
                 
                 # Opcional: Guardar el token y la vigencia en el modelo de la compañía
                 self.write({
-                    'tfhka_jwt_token': token,
-                    'tfhka_token_expiry': expiracion,
+                    'unidg_jwt_token': token,
+                    'unidg_token_expiry': expiracion,
                     'mensaje': mensaje,
                     'codigo' : codigo,
                     # Nota: La vigencia se guarda como texto, deberías convertirla a datetime si la usas para chequeos.
                     # 'tfhka_token_expiry': token_data.get('vigencia') 
                 })
                 
-                _logger.info("Token JWT de TFHKA obtenido con éxito.")
+                _logger.info("Token JWT de Unidigital obtenido con éxito.")
                 return token
             else:
                 error_msg = token_data.get('mensaje', 'Respuesta de Autenticación inválida sin token.')
@@ -103,11 +103,11 @@ class ResCompany(models.Model):
             # Captura errores HTTP (401, 404, etc.)
             error_response = response.text
             _logger.error("Error HTTP al obtener token: %s. Respuesta: %s", e, error_response)
-            raise UserError(_("Error de Autenticación TFHKA (HTTP %s). Verifique usuario y clave.") % response.status_code)
+            raise UserError(_("Error de Autenticación Unidigital (HTTP %s). Verifique usuario y clave.") % response.status_code)
             
         except requests.exceptions.RequestException as e:
             # Captura errores de conexión
-            _logger.error("Error de conexión al obtener token de TFHKA: %s", e)
+            _logger.error("Error de conexión al obtener token de Unidigital: %s", e)
             raise UserError(_("Error de conexión con la Imprenta Digital (Autenticación)."))
         except Exception as e:
             _logger.error("Error al procesar la respuesta del Token: %s", e)
