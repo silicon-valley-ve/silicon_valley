@@ -6,11 +6,11 @@
         <field name="inherit_id" ref="base.view_company_form"/>
         <field name="arch" type="xml">
           <xpath expr="/form//page[@name='confg_cuentas']" position="after">
-            <page string="Configuracion Facturacion Digital xxx" name="studio_page_7o2_1ju5cctos">
+            <page string="Configuracion Facturacion Digital" name="studio_page_7o2_1ju5cctos">
               <group name="studio_group_7o2">
                 <group name="group_left_unid">
                   <field name="usar_fact_digi" string="Habilitar Fact. digital?"/>
-                  <field name="url" invisible="usar_fact_digi==False"/>
+                  <field name="url" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
                 </group>
                 <group name="group_right_unid">
                 </group>
