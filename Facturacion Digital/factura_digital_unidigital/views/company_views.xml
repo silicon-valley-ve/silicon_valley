@@ -11,6 +11,18 @@
                 <group name="group_left_unid">
                   <field name="usar_fact_digi" string="Habilitar Fact. digital?"/>
                   <field name="url" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
+
+                  <field name="enpoint" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
+
+                  <field name="unidg_api_user" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
+
+                  <field name="unidg_api_password" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
+
+                  <field name="unidg_jwt_token" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
+
+                  <field name="mensaje" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
+
+                  <field name="codigo" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
                 </group>
                 <group name="group_right_unid">
                 </group>
