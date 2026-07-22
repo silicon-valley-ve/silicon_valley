@@ -1,57 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_company_currency_form_fd" model="ir.ui.view">
-        <field name="name">company.currency.view.form.fd</field>
+    <record id="modulo_fact_digital" model="ir.ui.view">
+        <field name="name">modulo.fact.digital</field>
         <field name="model">res.company</field>
         <field name="inherit_id" ref="base.view_company_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//form[1]/sheet[1]/notebook[1]" position="inside">
-                <page string="Config. Fact. Digital" name="studio_page_BZQPc">
-                  <group name="studio_group_BZQPc">
-                    <group name="studio_group_BZQPc_left">
-                      <field name="usar_fact_digi" string="Habilitar Fact. digital?"/>
-                      <field name="url" attrs="{
-        'invisible': [('usar_fact_digi', '=', False)],
-        'required': [('usar_fact_digi', '=', True)]
-    }"/>
-                      <field name="enpoint" attrs="{
-        'invisible': [('usar_fact_digi', '=', False)],
-        'required': [('usar_fact_digi', '=', True)]
-    }"/>
-                      <field name="tfhka_api_user" attrs="{
-        'invisible': [('usar_fact_digi', '=', False)],
-        'required': [('usar_fact_digi', '=', True)]
-    }"/>
-                      <field name="tfhka_api_password" attrs="{
-        'invisible': [('usar_fact_digi', '=', False)],
-        'required': [('usar_fact_digi', '=', True)]
-    }"/>
-                      <field name="tfhka_jwt_token" attrs="{'invisible': [('usar_fact_digi', '=', False)]}"/>
-                      <field name="tfhka_token_expiry" attrs="{'invisible': [('usar_fact_digi', '=', False)]}"/>
-                      <field name="mensaje" attrs="{'invisible': [('usar_fact_digi', '=', False)]}"/>
-                      <field name="codigo" attrs="{'invisible': [('usar_fact_digi', '=', False)]}"/>
-                    </group>
-                    <group name="studio_group_BZQPc_right">
-                        <button name="tfhka_get_token" string="Validar Token" type="object" attrs="{'invisible': [('usar_fact_digi', '=', False)]}"/>
-                        <button name="limpia" string="Limpiar" type="object" attrs="{'invisible': [('usar_fact_digi', '=', False)]}"/>
-                    </group>
-                  </group>
-                </page>
-
-                <page string="Enpoint" name="studio_enpoint" attrs="{'invisible': [('usar_fact_digi', '=', False)]}">
-                  <group name="studio_enpoint_g">
-                    <group name="studio_enpoint_left">
-                      <field name="enpoint_emision" attrs="{
-        'invisible': [('usar_fact_digi', '=', False)],
-        'required': [('usar_fact_digi', '=', True)]
-    }"/>
-                    </group>
-                    <group name="studio_enpoint_right">
-                      <field name="enpoint_ultimo_doc"/>
-                    </group>
-                  </group>
-                </page>
-            </xpath>
-        </field>
+          <xpath expr="/form//page[@name='confg_cuentas']" position="after">
+            <page string="Configuracion Facturacion Digital xxx" name="studio_page_7o2_1ju5cctos">
+              <group name="studio_group_7o2">
+                <group name="studio_group_7o2_left"/>
+                <group name="studio_group_7o2_right"/>
+              </group>
+            </page>
+          </xpath>
+         </field>
     </record>
 </odoo>

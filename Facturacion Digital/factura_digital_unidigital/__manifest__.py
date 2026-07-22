@@ -10,7 +10,7 @@
         'category': 'Customizations',
         'depends': ['base','account'],
         'data': [
-                #'views/company_views.xml',
+                'views/company_views.xml',
                 #'views/account_move_views.xml',
                 
         ],
