@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_base_document_layout_ilp" model="ir.ui.view">
+        <field name="name">base.document.layout.ilp</field>
+        <field name="model">base.document.layout</field>
+        <field name="inherit_id" ref="web.view_base_document_layout"/>
+        <field name="arch" type="xml">
+
+            <!-- Cacher "Colors" natifs — confusants car primary/secondary colorent
+                 le total et les labels de date sans rapport avec les ILP colors -->
+            <!-- Preview sticky -->
+            <xpath expr="//div[@class='o_preview']" position="attributes">
+                <attribute name="style">position:sticky;top:0;align-self:flex-start;</attribute>
+            </xpath>
+
+            <!-- Address : toggle Wysiwyg / Html -->
+            <xpath expr="//field[@name='company_details']" position="replace">
+                <div style="display:grid;grid-template-columns:105px auto;align-items:center;margin-bottom:6px;column-gap:12px;">
+                    <label for="company_details" string="Address"/>
+                    <field name="ilp_address_mode" widget="radio"
+                           options='{"horizontal": true}' nolabel="1"/>
+                </div>
+                <!-- Wysiwyg natif -->
+                <field name="company_details" widget="html" nolabel="1"
+                       invisible="ilp_address_mode == 'html'"/>
+                <!-- Html brut -->
+                <field name="ilp_address_html" widget="text" nolabel="1"
+                       placeholder="&lt;strong&gt;Mon Entreprise&lt;/strong&gt;&lt;br/&gt;123 rue de la Paix, 75001 Paris"
+                       invisible="ilp_address_mode == 'wysiwyg'"/>
+            </xpath>
+
+            <!-- Tagline : toggle Wysiwyg / Html -->
+            <xpath expr="//field[@name='report_header']" position="replace">
+                <div style="display:grid;grid-template-columns:105px auto;align-items:center;margin-bottom:6px;column-gap:12px;">
+                    <label for="report_header" string="Tagline"/>
+                    <field name="ilp_tagline_mode" widget="radio"
+                           options='{"horizontal": true}' nolabel="1"/>
+                </div>
+                <!-- Wysiwyg natif -->
+                <field name="report_header" widget="html" nolabel="1"
+                       invisible="ilp_tagline_mode == 'html'"/>
+                <!-- Html brut -->
+                <field name="ilp_tagline_html" widget="text" nolabel="1"
+                       placeholder="&lt;em&gt;Votre slogan&lt;/em&gt;"
+                       invisible="ilp_tagline_mode == 'wysiwyg'"/>
+            </xpath>
+
+            <!-- Footer : toggle Wysiwyg / Html -->
+            <xpath expr="//field[@name='report_footer']" position="replace">
+                <div style="display:grid;grid-template-columns:105px auto;align-items:center;margin-bottom:6px;column-gap:12px;">
+                    <label for="report_footer" string="Footer"/>
+                    <field name="ilp_footer_mode" widget="radio"
+                           options='{"horizontal": true}' nolabel="1"/>
+                </div>
+                <!-- Wysiwyg natif -->
+                <field name="report_footer" widget="html" nolabel="1"
+                       invisible="ilp_footer_mode == 'html'"/>
+                <!-- Html brut -->
+                <field name="ilp_footer_html" widget="text" nolabel="1"
+                       placeholder="Tél : &lt;b&gt;+33 1 23 45 67&lt;/b&gt; — contact@entreprise.fr"
+                       invisible="ilp_footer_mode == 'wysiwyg'"/>
+            </xpath>
+
+            <!-- Section ILP : couleurs + CGV -->
+            <xpath expr="//field[@name='paperformat_id']" position="after">
+                <separator string="Invoice Layout Pro"/>
+
+                <!-- Couleurs : Titre seul, puis 2 lignes alignées en grid -->
+                <label for="ilp_title_color" string="Table Colors"/>
+                <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+                    <!-- Ligne 1 : Titre seul -->
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <field name="ilp_title_color" widget="color" class="w-auto m-0"/>
+                        <small class="text-muted">Title</small>
+                    </div>
+                    <!-- Lignes 2-3 : grid 175px/auto pour aligner "Texte entêtes" et "Texte total" -->
+                    <div style="display:grid;grid-template-columns:175px auto;align-items:center;gap:4px;">
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <field name="ilp_th_bg_color" widget="color" class="w-auto m-0"/>
+                            <small class="text-muted">Header background</small>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <field name="ilp_th_text_color" widget="color" class="w-auto m-0"/>
+                            <small class="text-muted">Header text</small>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:175px auto;align-items:center;gap:4px;">
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <field name="ilp_total_bg_color" widget="color" class="w-auto m-0"/>
+                            <small class="text-muted">Total background</small>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <field name="ilp_total_text_color" widget="color" class="w-auto m-0"/>
+                            <small class="text-muted">Total text</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Numérotation de page PDF -->
+
+                <!-- CGV : toggle Wysiwyg / Html -->
+                <div style="display:grid;grid-template-columns:105px auto;align-items:center;margin-bottom:6px;column-gap:12px;">
+                    <label for="ilp_legal_terms" string="Mentions légales / CGV"/>
+                    <field name="ilp_legal_mode" widget="radio"
+                           options='{"horizontal": true}' nolabel="1"/>
+                </div>
+                <!-- Wysiwyg -->
+                <field name="ilp_legal_terms" widget="html" nolabel="1"
+                       invisible="ilp_legal_mode == 'html'"/>
+                <!-- Html brut -->
+                <field name="ilp_legal_html" widget="text" nolabel="1"
+                       placeholder="Article 1 — &lt;strong&gt;Objet&lt;/strong&gt;..."
+                       invisible="ilp_legal_mode == 'wysiwyg'"/>
+
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- Cache la section "Colors" natifs - primary/secondary gérés par ILP -->
+    <record id="view_base_document_layout_hide_colors" model="ir.ui.view">
+        <field name="name">base.document.layout.hide.colors</field>
+        <field name="model">base.document.layout</field>
+        <field name="inherit_id" ref="web.view_base_document_layout"/>
+        <field name="arch" type="xml">
+            <xpath expr="//label[@for='primary_color']" position="replace"/>
+            <xpath expr="//div[contains(@class,'o_document_layout_colors')]" position="replace">
+                <field name="primary_color" invisible="1"/>
+                <field name="secondary_color" invisible="1"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
