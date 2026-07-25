@@ -25,6 +25,8 @@
                   <field name="codigo" invisible="usar_fact_digi==False" />
 
                   <field name="seriestrongid" invisible="usar_fact_digi==False" />
+                  
+                  <field name="sucursal_strong_id" invisible="usar_fact_digi==False" />
                 </group>
 
                 <group name="group_right_unid">
