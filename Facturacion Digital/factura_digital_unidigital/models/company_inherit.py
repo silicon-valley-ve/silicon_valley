@@ -36,7 +36,7 @@ class ResCompany(models.Model):
     enpoint_emision = fields.Char(string="Endpoint Emisión", copy=False, default='/documents/createandapprove')
     enpoint_ultimo_doc = fields.Char(string="Endpoint Último Documento", copy=False)
     seriestrongid = fields.Char(string="SerieStrOngid",copy=False,readonly=True) 
-    sucursal_strong_id = fields.Char(string="SucursalStrongId",copy=False)
+    sucursal_strong_id = fields.Char(string="SucursalStrongId",copy=False, default="81e836fe-eff1-4ca7-bcfd-5f079a44a503")
 
 
     def unidg_get_token(self):
