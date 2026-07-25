@@ -18,6 +18,8 @@
 
                   <field name="unidg_api_password" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
 
+                  <field name="sucursal_strong_id" invisible="usar_fact_digi==False" />
+
                   <field name="unidg_jwt_token" invisible="usar_fact_digi==False"/>
 
                   <field name="mensaje" invisible="usar_fact_digi==False" />
@@ -25,8 +27,8 @@
                   <field name="codigo" invisible="usar_fact_digi==False" />
 
                   <field name="seriestrongid" invisible="usar_fact_digi==False" />
+
                   
-                  <field name="sucursal_strong_id" invisible="usar_fact_digi==False" />
                 </group>
 
                 <group name="group_right_unid">
