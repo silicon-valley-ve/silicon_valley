@@ -28,6 +28,11 @@ _logger = logging.getLogger(__name__)
 class AccountMove(models.Model):
     _inherit = "account.move"
 
+    result = fields.Char()
+    hasErrors = fields.Char()
+    errorMessage = fields.Char()
+    information = fields.Char()
+
     
 
     def simular(self):
