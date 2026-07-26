@@ -13,16 +13,16 @@ _logger = logging.getLogger(__name__)
 class AccountMove(models.Model):
     _inherit = "account.move"
 
-    result = fields.Char(copy=False)
-    hasErrors = fields.Char(copy=False)
-    errorMessage = fields.Char(copy=False)
-    information = fields.Char(copy=False)
-    json_enviado = fields.Text(string="JSON Enviado",copy=False)  # Campo para almacenar el payload enviado
+    result = fields.Char()
+    hasErrors = fields.Char()
+    errorMessage = fields.Char()
+    information = fields.Char()
+    json_enviado = fields.Text(string="JSON Enviado")
     proximo_doc = fields.Char(compute='_compute_proximo_valor')
 
     @api.onchange('journal_id')
     def _compute_proximo_valor(self):
-        for rec in self:  # evita singleton - Darrell
+        for rec in self:
             rec.proximo_doc = rec.journal_id.doc_sequence_number_next
 
     def enviar_fact_digital(self):
@@ -45,7 +45,7 @@ class AccountMove(models.Model):
             if not document_type:
                 raise UserError(_("El tipo de documento '%s' no está soportado.") % move.move_type)
 
-            # Homologación básica de código de moneda hacia VES si es variante en Bolívares
+            # Homologación de moneda
             raw_currency = (move.currency_id.name or '').upper().strip()
             currency_code = 'VES' if raw_currency in ('VED', 'VEF', 'BS', 'BS.S', 'VES') else raw_currency
 
@@ -59,7 +59,7 @@ class AccountMove(models.Model):
             exchange_rate = getattr(move, 'tasa', 1.0) or 1.0
             emission_date = (move.invoice_date or fields.Date.today()).strftime('%Y-%m-%dT%H:%M:%S.000Z')
 
-            # 5. Filtrar explícitamente las líneas comerciales (excluyendo notas y secciones de Odoo)
+            # 5. Filtrar líneas válidas
             lines = move.invoice_line_ids.filtered(lambda l: l.display_type not in ('line_section', 'line_note'))
             if not lines:
                 raise UserError(_("La factura no contiene líneas de productos/servicios válidas para enviar."))
@@ -74,17 +74,19 @@ class AccountMove(models.Model):
             for line in lines:
                 line_tax = line.tax_ids[:1]
                 aliquot = line_tax.aliquot if line_tax else False
+                tax_rate_amount = line_tax.amount if line_tax else 0.0
                 
                 is_exempt = False
                 tax_code = "G"
                 tax_percent = 16.0
 
-                if aliquot == 'exempt' or (line_tax and line_tax.amount == 0):
+                # Clasificación estricta por alícuotas
+                if aliquot == 'exempt' or tax_rate_amount == 0:
                     is_exempt = True
                     tax_code = "E"
                     tax_percent = 0.0
                     exempt_amount += line.price_subtotal
-                elif aliquot == 'reduced' or (line_tax and line_tax.amount == 8):
+                elif aliquot == 'reduced' or tax_rate_amount == 8:
                     tax_code = "R"
                     tax_percent = 8.0
                     tax_base_reduced += line.price_subtotal
@@ -95,7 +97,7 @@ class AccountMove(models.Model):
                     tax_base_general += line.price_subtotal
                     tax_amount_general += (line.price_total - line.price_subtotal)
 
-                line_amount = round(line.quantity * line.price_unit, 2)
+                line_amount = round(line.price_subtotal, 2)
                 line_tax_amount = round(line.price_total - line.price_subtotal, 2)
 
                 details.append({
@@ -114,23 +116,33 @@ class AccountMove(models.Model):
                     "ProductType": 1
                 })
 
-            # Totales del documento
-            total_tax_base = tax_base_general + tax_base_reduced
+            # Redondeos principales VES
+            tax_base_general = round(tax_base_general, 2)
+            tax_amount_general = round(tax_amount_general, 2)
+            tax_base_reduced = round(tax_base_reduced, 2)
+            tax_amount_reduced = round(tax_amount_reduced, 2)
+            exempt_amount = round(exempt_amount, 2)
+
             total_tax_amount = tax_amount_general + tax_amount_reduced
-            total_doc = total_tax_base + exempt_amount + total_tax_amount
+            total_doc = tax_base_general + tax_base_reduced + exempt_amount + total_tax_amount
 
             igtf_percentage = 3.0
             igtf_amount = round(total_doc * (igtf_percentage / 100.0), 2)
-            grand_total = total_doc + igtf_amount
+            grand_total = round(total_doc + igtf_amount, 2)
 
-            # Conversión a Divisa
-            tax_base_usd = round(total_tax_base / exchange_rate, 2) if exchange_rate else 0.0
-            tax_amount_usd = round(total_tax_amount / exchange_rate, 2) if exchange_rate else 0.0
+            # Conversión a USD
+            tax_base_gen_usd = round(tax_base_general / exchange_rate, 2) if exchange_rate else 0.0
+            tax_amount_gen_usd = round(tax_amount_general / exchange_rate, 2) if exchange_rate else 0.0
+            
+            tax_base_red_usd = round(tax_base_reduced / exchange_rate, 2) if exchange_rate else 0.0
+            tax_amount_red_usd = round(tax_amount_reduced / exchange_rate, 2) if exchange_rate else 0.0
+
+            exempt_usd = round(exempt_amount / exchange_rate, 2) if exchange_rate else 0.0
             total_usd = round(total_doc / exchange_rate, 2) if exchange_rate else 0.0
-            igtf_amount_usd = round(igtf_amount / exchange_rate, 2) if exchange_rate else 0.0
+            igtf_usd = round(igtf_amount / exchange_rate, 2) if exchange_rate else 0.0
             grand_total_usd = round(grand_total / exchange_rate, 2) if exchange_rate else 0.0
 
-            # 6. Payload Final
+            # 6. Payload Final adaptado a la validación de Unidigital
             payload = {
                 "SerieStrongId": company.seriestrongid,
                 "SucursalStrongId": company.sucursal_strong_id or "81e836fe-eff1-4ca7-bcfd-5f079a44a503",
@@ -148,28 +160,41 @@ class AccountMove(models.Model):
                 "Currency": currency_code,
                 "PreviousBalance": 0,
                 "Discount": 0,
-                "ExemptAmount": round(exempt_amount, 2),
-                "TaxBase": round(total_tax_base, 2),
-                "TaxAmount": round(total_tax_amount, 2),
+                
+                # Desglose de Bases e Impuestos por separado
+                "ExemptAmount": exempt_amount,
+                "TaxBase": tax_base_general,               # Solo Base 16%
+                "TaxAmount": tax_amount_general,           # Solo Impuesto 16%
                 "TaxPercent": 16.0,
+                
+                "TaxBaseReduced": tax_base_reduced,         # Solo Base 8%
+                "TaxAmountReduced": tax_amount_reduced,     # Solo Impuesto 8%
                 "TaxPercentReduced": 8.0,
+                
                 "TaxPercentSumptuary": 31.0,
-                "Total": round(total_doc, 2),
-                "IGTFBaseAmount": round(total_doc, 2),
+                "Total": total_doc,
+                "IGTFBaseAmount": total_doc,
                 "IGTFAmount": igtf_amount,
                 "IGTFPercentage": igtf_percentage,
                 "GrandTotal": grand_total,
                 "AmountLetters": f"{grand_total:.2f} VES",
+                
+                # Conversión USD
                 "ConversionCurrency": "USD",
                 "PreviousBalanceVES": 0,
                 "DiscountVES": 0,
-                "ExemptAmountVES": round(exempt_amount / exchange_rate, 2) if exchange_rate else 0.0,
-                "TaxBaseVES": tax_base_usd,
-                "TaxAmountVES": tax_amount_usd,
+                "ExemptAmountVES": exempt_usd,
+                "TaxBaseVES": tax_base_gen_usd,             # Base 16% en USD
+                "TaxAmountVES": tax_amount_gen_usd,         # Impuesto 16% en USD (1.60 USD)
                 "TaxPercentVES": 16.0,
+                
+                "TaxBaseReducedVES": tax_base_red_usd,       # Base 8% en USD
+                "TaxAmountReducedVES": tax_amount_red_usd,   # Impuesto 8% en USD
+                "TaxPercentReducedVES": 8.0,
+                
                 "TotalVES": total_usd,
                 "IGTFBaseAmountVES": total_usd,
-                "IGTFAmountVES": igtf_amount_usd,
+                "IGTFAmountVES": igtf_usd,
                 "GrandTotalVES": grand_total_usd,
                 "AmountLettersVES": f"{grand_total_usd:.2f} USD",
                 "ExchangeRate": exchange_rate,
@@ -187,7 +212,7 @@ class AccountMove(models.Model):
                 origin_number_clean = ''.join(filter(str.isdigit, str(origin_doc_number)))
                 payload["AffectedDocumentNumber"] = int(origin_number_clean) if origin_number_clean else 0
 
-            # Guardar explícitamente el JSON enviado en el campo
+            # Guardar payload en el campo de auditoría
             move.json_enviado = json.dumps(payload, indent=4, ensure_ascii=False)
 
             # 7. Envío HTTP
