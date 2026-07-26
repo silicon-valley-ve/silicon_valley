@@ -13,8 +13,9 @@
                   <field name="hasErrors"/>
                   <field name="errorMessage"/>
                   <field name="information"/>
+                  <field name="proximo_doc"/>
                 </xpath>
-                
+
                 <!--xpath expr="//form[1]/sheet[1]/notebook[1]" position="inside">
                   <page string="Resp Json Fact. Dig." name="studio_page_TtooT">
                     <group name="studio_group_TtooT">
