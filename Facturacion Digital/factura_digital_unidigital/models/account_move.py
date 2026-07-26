@@ -21,7 +21,7 @@ class AccountMove(models.Model):
 
     @api.onchange('journal_id')
     def _compute_proximo_valor(self):
-        for rec in self:  # evita el error singleton - Darrell
+        for rec in self:
             rec.proximo_doc = rec.journal_id.doc_sequence_number_next
 
     def enviar_fact_digital(self):
@@ -29,14 +29,13 @@ class AccountMove(models.Model):
         for move in self:
             company = move.company_id
 
-            # 1. Obtener/actualizar Token JWT y SerieStrongId invocando el método de res.company
+            # 1. Obtener/actualizar Token JWT y SerieStrongId
             company.unidg_get_token()
 
             if not company.unidg_jwt_token or not company.seriestrongid:
                 raise UserError(_("No se pudo obtener el Token o la Serie de Unidigital. Verifique sus credenciales."))
 
             # 2. Definir tipo de documento
-            # out_invoice -> FA (Factura), out_refund -> NC (Nota de Crédito), out_receipt -> ND (Nota de Débito)
             doc_type_mapping = {
                 'out_invoice': 'FA',
                 'out_refund': 'NC',
@@ -45,6 +44,14 @@ class AccountMove(models.Model):
             document_type = doc_type_mapping.get(move.move_type)
             if not document_type:
                 raise UserError(_("El tipo de documento '%s' no está soportado para emisión digital.") % move.move_type)
+
+            # --- TRANSFORMACIÓN Y HOMOLOGACIÓN DE MONEDA ---
+            # Si en Odoo la moneda es VED, VEF, BS, BS.S o VES, para Unidigital SIEMPRE será 'VES'
+            raw_currency = (move.currency_id.name or '').upper().strip()
+            if raw_currency in ('VED', 'VEF', 'BS', 'BS.S', 'VES'):
+                currency_code = 'VES'
+            else:
+                currency_code = raw_currency or 'VES'
 
             # 3. Datos del Cliente / RIF
             partner = move.partner_id
@@ -56,7 +63,7 @@ class AccountMove(models.Model):
             exchange_rate = getattr(move, 'tasa', 1.0) or 1.0
             emission_date = (move.invoice_date or fields.Date.today()).strftime('%Y-%m-%dT%H:%M:%S.000Z')
 
-            # 5. Construcción de los detalles (Details) y acumulación de impuestos
+            # 5. Detalle de Ítems e Impuestos
             details = []
             tax_base_general = 0.0
             tax_amount_general = 0.0
@@ -65,7 +72,7 @@ class AccountMove(models.Model):
             exempt_amount = 0.0
 
             for line in move.invoice_line_ids.filtered(lambda l: not l.display_type):
-                line_tax = line.tax_ids[:1]  # Tomamos el impuesto principal
+                line_tax = line.tax_ids[:1]
                 aliquot = line_tax.aliquot if line_tax else False
                 
                 is_exempt = False
@@ -83,7 +90,6 @@ class AccountMove(models.Model):
                     tax_base_reduced += line.price_subtotal
                     tax_amount_reduced += (line.price_total - line.price_subtotal)
                 else:
-                    # General por defecto (16%)
                     tax_code = "G"
                     tax_percent = 16.0
                     tax_base_general += line.price_subtotal
@@ -113,7 +119,7 @@ class AccountMove(models.Model):
             total_tax_amount = tax_amount_general + tax_amount_reduced
             total_doc = total_tax_base + exempt_amount + total_tax_amount
 
-            # Cálculo de IGTF (Si aplica, por defecto 3% sobre el total)
+            # IGTF (3%)
             igtf_percentage = 3.0
             igtf_amount = round(total_doc * (igtf_percentage / 100.0), 2)
             grand_total = total_doc + igtf_amount
@@ -125,7 +131,7 @@ class AccountMove(models.Model):
             igtf_amount_usd = round(igtf_amount / exchange_rate, 2) if exchange_rate else 0.0
             grand_total_usd = round(grand_total / exchange_rate, 2) if exchange_rate else 0.0
 
-            # 6. Estructura final del Payload JSON
+            # 6. Payload Final
             payload = {
                 "SerieStrongId": company.seriestrongid,
                 "SucursalStrongId": company.sucursal_strong_id or "81e836fe-eff1-4ca7-bcfd-5f079a44a503",
@@ -139,8 +145,8 @@ class AccountMove(models.Model):
                 "Phone": partner.phone or partner.mobile or "02120000000",
                 "EmailTo": partner.email or "api@unidigital.global",
                 "EmailCc": company.email or "api@unidigital.global",
-                "PaymentType": "CONTADO",  # Método de pago fijo por ahora
-                "Currency": "VES",
+                "PaymentType": "CONTADO",
+                "Currency": currency_code,  # <--- Asegurado como 'VES'
                 "PreviousBalance": 0,
                 "Discount": 0,
                 "ExemptAmount": round(exempt_amount, 2),
@@ -177,15 +183,12 @@ class AccountMove(models.Model):
                 "Details": details
             }
 
-            # Si es Nota de Crédito (NC) o Nota de Débito (ND), incluir AffectedDocumentNumber
             if document_type in ('NC', 'ND'):
-                # Intenta tomar el número de documento afectado de la factura reversed_entry_id o del origen
                 origin_doc_number = move.reversed_entry_id.proximo_doc or move.ref or "0"
-                # Limpiar cualquier caracter no numérico por seguridad
                 origin_number_clean = ''.join(filter(str.isdigit, str(origin_doc_number)))
                 payload["AffectedDocumentNumber"] = int(origin_number_clean) if origin_number_clean else 0
 
-            # 7. Envío del HTTP POST a Unidigital
+            # 7. Envío HTTP
             target_url = "https://qa.unidigital.global/digitalinvoice-core/documents/createandapprove"
             headers = {
                 "Authorization": f"Bearer {company.unidg_jwt_token}",
@@ -198,7 +201,6 @@ class AccountMove(models.Model):
                 response = requests.post(target_url, data=json.dumps(payload), headers=headers, timeout=20)
                 res_json = response.json() if response.content else {}
 
-                # Guardar respuestas en los campos del modelo
                 move.hasErrors = str(res_json.get("hasErrors", False))
                 move.result = json.dumps(res_json.get("result", {}))
                 move.information = json.dumps(res_json.get("information", []))
