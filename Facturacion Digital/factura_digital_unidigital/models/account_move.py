@@ -59,7 +59,7 @@ class AccountMove(models.Model):
             exchange_rate = getattr(move, 'tasa', 1.0) or 1.0
             emission_date = (move.invoice_date or fields.Date.today()).strftime('%Y-%m-%dT%H:%M:%S.000Z')
 
-            # 5. Filtrar líneas válidas
+            # 5. Filtrar líneas comerciales válidas
             lines = move.invoice_line_ids.filtered(lambda l: l.display_type not in ('line_section', 'line_note'))
             if not lines:
                 raise UserError(_("La factura no contiene líneas de productos/servicios válidas para enviar."))
@@ -80,7 +80,6 @@ class AccountMove(models.Model):
                 tax_code = "G"
                 tax_percent = 16.0
 
-                # Clasificación estricta por alícuotas
                 if aliquot == 'exempt' or tax_rate_amount == 0:
                     is_exempt = True
                     tax_code = "E"
@@ -116,21 +115,24 @@ class AccountMove(models.Model):
                     "ProductType": 1
                 })
 
-            # Redondeos principales VES
+            # Redondeos por alícuota
             tax_base_general = round(tax_base_general, 2)
             tax_amount_general = round(tax_amount_general, 2)
             tax_base_reduced = round(tax_base_reduced, 2)
             tax_amount_reduced = round(tax_amount_reduced, 2)
             exempt_amount = round(exempt_amount, 2)
 
-            total_tax_amount = tax_amount_general + tax_amount_reduced
-            total_doc = tax_base_general + tax_base_reduced + exempt_amount + total_tax_amount
+            # Tomar Totales Oficiales de Odoo para evitar diferencias de 1 céntimo
+            total_doc = round(move.amount_total, 2)
 
-            igtf_percentage = 3.0
-            igtf_amount = round(total_doc * (igtf_percentage / 100.0), 2)
+            # Manejo Dinámico de IGTF (Solo si aplica)
+            igtf_amount = getattr(move, 'igtf_amount', 0.0) or 0.0
+            igtf_percentage = 3.0 if igtf_amount > 0 else 0.0
+            igtf_base_amount = total_doc if igtf_amount > 0 else 0.0
+            
             grand_total = round(total_doc + igtf_amount, 2)
 
-            # Conversión a USD
+            # Conversión a Divisa Referencial (USD)
             tax_base_gen_usd = round(tax_base_general / exchange_rate, 2) if exchange_rate else 0.0
             tax_amount_gen_usd = round(tax_amount_general / exchange_rate, 2) if exchange_rate else 0.0
             
@@ -142,7 +144,7 @@ class AccountMove(models.Model):
             igtf_usd = round(igtf_amount / exchange_rate, 2) if exchange_rate else 0.0
             grand_total_usd = round(grand_total / exchange_rate, 2) if exchange_rate else 0.0
 
-            # 6. Payload Final adaptado a la validación de Unidigital
+            # 6. Payload Final
             payload = {
                 "SerieStrongId": company.seriestrongid,
                 "SucursalStrongId": company.sucursal_strong_id or "81e836fe-eff1-4ca7-bcfd-5f079a44a503",
@@ -160,40 +162,32 @@ class AccountMove(models.Model):
                 "Currency": currency_code,
                 "PreviousBalance": 0,
                 "Discount": 0,
-                
-                # Desglose de Bases e Impuestos por separado
                 "ExemptAmount": exempt_amount,
-                "TaxBase": tax_base_general,               # Solo Base 16%
-                "TaxAmount": tax_amount_general,           # Solo Impuesto 16%
+                "TaxBase": tax_base_general,
+                "TaxAmount": tax_amount_general,
                 "TaxPercent": 16.0,
-                
-                "TaxBaseReduced": tax_base_reduced,         # Solo Base 8%
-                "TaxAmountReduced": tax_amount_reduced,     # Solo Impuesto 8%
+                "TaxBaseReduced": tax_base_reduced,
+                "TaxAmountReduced": tax_amount_reduced,
                 "TaxPercentReduced": 8.0,
-                
                 "TaxPercentSumptuary": 31.0,
                 "Total": total_doc,
-                "IGTFBaseAmount": total_doc,
+                "IGTFBaseAmount": igtf_base_amount,
                 "IGTFAmount": igtf_amount,
                 "IGTFPercentage": igtf_percentage,
                 "GrandTotal": grand_total,
                 "AmountLetters": f"{grand_total:.2f} VES",
-                
-                # Conversión USD
                 "ConversionCurrency": "USD",
                 "PreviousBalanceVES": 0,
                 "DiscountVES": 0,
                 "ExemptAmountVES": exempt_usd,
-                "TaxBaseVES": tax_base_gen_usd,             # Base 16% en USD
-                "TaxAmountVES": tax_amount_gen_usd,         # Impuesto 16% en USD (1.60 USD)
+                "TaxBaseVES": tax_base_gen_usd,
+                "TaxAmountVES": tax_amount_gen_usd,
                 "TaxPercentVES": 16.0,
-                
-                "TaxBaseReducedVES": tax_base_red_usd,       # Base 8% en USD
-                "TaxAmountReducedVES": tax_amount_red_usd,   # Impuesto 8% en USD
+                "TaxBaseReducedVES": tax_base_red_usd,
+                "TaxAmountReducedVES": tax_amount_red_usd,
                 "TaxPercentReducedVES": 8.0,
-                
                 "TotalVES": total_usd,
-                "IGTFBaseAmountVES": total_usd,
+                "IGTFBaseAmountVES": igtf_usd,
                 "IGTFAmountVES": igtf_usd,
                 "GrandTotalVES": grand_total_usd,
                 "AmountLettersVES": f"{grand_total_usd:.2f} USD",
@@ -212,7 +206,7 @@ class AccountMove(models.Model):
                 origin_number_clean = ''.join(filter(str.isdigit, str(origin_doc_number)))
                 payload["AffectedDocumentNumber"] = int(origin_number_clean) if origin_number_clean else 0
 
-            # Guardar payload en el campo de auditoría
+            # Guardar JSON enviado para auditoría
             move.json_enviado = json.dumps(payload, indent=4, ensure_ascii=False)
 
             # 7. Envío HTTP
