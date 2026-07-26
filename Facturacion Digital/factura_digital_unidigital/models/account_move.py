@@ -41,6 +41,6 @@ class AccountMove(models.Model):
 
     
 
-    def simular(self):
+    def enviar_fact_digital(self):
         raise UserError(_("Tipo=%s")%self.move_type)
         pass

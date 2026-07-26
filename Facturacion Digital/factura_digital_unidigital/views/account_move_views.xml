@@ -34,7 +34,7 @@
                 </xpath-->
 
                 <xpath expr="//button[@id='account_invoice_payment_btn']" position="after">
-                         <button name="simular" string="simular" type="object" />
+                         <button name="enviar_fact_digital" string="simular envio" type="object" />
                          
                          <!--button name="button_draft" string="borrador 2" type="object" /-->
                 </xpath>
