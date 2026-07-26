@@ -32,6 +32,12 @@ class AccountMove(models.Model):
     hasErrors = fields.Char()
     errorMessage = fields.Char()
     information = fields.Char()
+    proximo_doc = fields.Char(compute='_compute_proximo_valor')
+
+    @api.onchange('journal_id')
+    def _compute_proximo_valor(self):
+        for rec in self: #se coloco esto para evitar el error siglenton - Darrell
+            rec.proximo_doc=rec.journal_id.doc_sequence_number_next
 
     
 
