@@ -13,10 +13,11 @@ _logger = logging.getLogger(__name__)
 class AccountMove(models.Model):
     _inherit = "account.move"
 
-    result = fields.Char(copy=False)
-    hasErrors = fields.Char(copy=False)
-    errorMessage = fields.Char(copy=False)
-    information = fields.Char(copy=False)
+    result = fields.Char()
+    hasErrors = fields.Char()
+    errorMessage = fields.Char()
+    information = fields.Char()
+    json_enviado = fields.Text(string="JSON Enviado API", readonly=True, copy=False)
     proximo_doc = fields.Char(compute='_compute_proximo_valor')
 
     @api.onchange('journal_id')
@@ -45,8 +46,7 @@ class AccountMove(models.Model):
             if not document_type:
                 raise UserError(_("El tipo de documento '%s' no está soportado para emisión digital.") % move.move_type)
 
-            # --- TRANSFORMACIÓN Y HOMOLOGACIÓN DE MONEDA ---
-            # Si en Odoo la moneda es VED, VEF, BS, BS.S o VES, para Unidigital SIEMPRE será 'VES'
+            # Homologación de Moneda
             raw_currency = (move.currency_id.name or '').upper().strip()
             if raw_currency in ('VED', 'VEF', 'BS', 'BS.S', 'VES'):
                 currency_code = 'VES'
@@ -114,7 +114,7 @@ class AccountMove(models.Model):
                     "ProductType": 1
                 })
 
-            # Totales de Impuesto en VES
+            # Totales en VES
             total_tax_base = tax_base_general + tax_base_reduced
             total_tax_amount = tax_amount_general + tax_amount_reduced
             total_doc = total_tax_base + exempt_amount + total_tax_amount
@@ -124,14 +124,14 @@ class AccountMove(models.Model):
             igtf_amount = round(total_doc * (igtf_percentage / 100.0), 2)
             grand_total = total_doc + igtf_amount
 
-            # Conversión a Divisa secundaria (USD)
+            # Conversión USD
             tax_base_usd = round(total_tax_base / exchange_rate, 2) if exchange_rate else 0.0
             tax_amount_usd = round(total_tax_amount / exchange_rate, 2) if exchange_rate else 0.0
             total_usd = round(total_doc / exchange_rate, 2) if exchange_rate else 0.0
             igtf_amount_usd = round(igtf_amount / exchange_rate, 2) if exchange_rate else 0.0
             grand_total_usd = round(grand_total / exchange_rate, 2) if exchange_rate else 0.0
 
-            # 6. Payload Final
+            # 6. Estructura Payload
             payload = {
                 "SerieStrongId": company.seriestrongid,
                 "SucursalStrongId": company.sucursal_strong_id or "81e836fe-eff1-4ca7-bcfd-5f079a44a503",
@@ -146,7 +146,7 @@ class AccountMove(models.Model):
                 "EmailTo": partner.email or "api@unidigital.global",
                 "EmailCc": company.email or "api@unidigital.global",
                 "PaymentType": "CONTADO",
-                "Currency": currency_code,  # <--- Asegurado como 'VES'
+                "Currency": currency_code,
                 "PreviousBalance": 0,
                 "Discount": 0,
                 "ExemptAmount": round(exempt_amount, 2),
@@ -187,6 +187,9 @@ class AccountMove(models.Model):
                 origin_doc_number = move.reversed_entry_id.proximo_doc or move.ref or "0"
                 origin_number_clean = ''.join(filter(str.isdigit, str(origin_doc_number)))
                 payload["AffectedDocumentNumber"] = int(origin_number_clean) if origin_number_clean else 0
+
+            # Guardar el JSON exacto enviado en el campo
+            move.json_enviado = json.dumps(payload, indent=4, ensure_ascii=False)
 
             # 7. Envío HTTP
             target_url = "https://qa.unidigital.global/digitalinvoice-core/documents/createandapprove"
