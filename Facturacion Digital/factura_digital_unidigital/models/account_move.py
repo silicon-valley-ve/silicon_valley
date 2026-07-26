@@ -31,4 +31,5 @@ class AccountMove(models.Model):
     
 
     def simular(self):
+        raise UserError(_("Tipo=%s")%self.move_type)
         pass
