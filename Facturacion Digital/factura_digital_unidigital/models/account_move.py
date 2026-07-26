@@ -17,11 +17,12 @@ class AccountMove(models.Model):
     hasErrors = fields.Char()
     errorMessage = fields.Char()
     information = fields.Char()
+    json_enviado = fields.Text(string="JSON Enviado")  # Campo para almacenar el payload enviado
     proximo_doc = fields.Char(compute='_compute_proximo_valor')
 
     @api.onchange('journal_id')
     def _compute_proximo_valor(self):
-        for rec in self:
+        for rec in self:  # evita singleton - Darrell
             rec.proximo_doc = rec.journal_id.doc_sequence_number_next
 
     def enviar_fact_digital(self):
@@ -29,7 +30,7 @@ class AccountMove(models.Model):
         for move in self:
             company = move.company_id
 
-            # 1. Obtener Token y Serie invocando res.company
+            # 1. Obtener Token y Serie
             company.unidg_get_token()
             if not company.unidg_jwt_token or not company.seriestrongid:
                 raise UserError(_("No se pudo obtener el Token o la Serie de Unidigital."))
@@ -185,6 +186,9 @@ class AccountMove(models.Model):
                 origin_doc_number = move.reversed_entry_id.proximo_doc or move.ref or "0"
                 origin_number_clean = ''.join(filter(str.isdigit, str(origin_doc_number)))
                 payload["AffectedDocumentNumber"] = int(origin_number_clean) if origin_number_clean else 0
+
+            # Guardar explícitamente el JSON enviado en el campo
+            move.json_enviado = json.dumps(payload, indent=4, ensure_ascii=False)
 
             # 7. Envío HTTP
             target_url = "https://qa.unidigital.global/digitalinvoice-core/documents/createandapprove"
