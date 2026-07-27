@@ -59,10 +59,11 @@
                 <xpath expr="//button[@id='account_invoice_payment_btn']" position="after">
                          <!--button name="enviar_fact_digital" string="simular envio" type="object" /-->
 
-                         <button name="confirmar2" string="Confirmar" type="object" 
-                            class="btn-success"
-                            invisible="move_type in ('in_invoice', 'in_refund', 'in_receipt', 'entry')"
-                          />
+                         <button name="confirmar2" 
+        string="Confirmar" 
+        type="object" 
+        class="btn-success"
+        invisible="not usar_fact_digi or move_type not in ('out_invoice', 'out_refund', 'out_receipt')"/>
                          
                          <!--button name="button_draft" string="borrador 2" type="object" /-->
                 </xpath>
