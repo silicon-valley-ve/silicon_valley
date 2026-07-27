@@ -21,9 +21,9 @@
                     <group name="studio_group_4pi">
                       <group name="studio_group_4pi_left">
                         <field name="result"/>
-                        <field name="hasErrors"/>
-                        <field name="errorMessage"/>
-                        <field name="information"/>
+                        <field name="hasErrors" string="Hubo Error?"/>
+                        <field name="errorMessage" string="Mensaje de error"/>
+                        <field name="information" string="Informacion:"/>
                         <field name="code"/>
                       </group>
                       <group name="studio_group_4pi_right">
