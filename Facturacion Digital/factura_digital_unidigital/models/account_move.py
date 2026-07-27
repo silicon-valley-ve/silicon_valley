@@ -276,7 +276,8 @@ class AccountMove(models.Model):
             move.json_enviado = json.dumps(payload, indent=4, ensure_ascii=False)
 
             # 7. Envío HTTP
-            target_url = "https://qa.unidigital.global/digitalinvoice-core/documents/createandapprove"
+            target_url = move.company_id.url
+            #target_url = "https://qa.unidigital.global/digitalinvoice-core/documents/createandapprove"
             headers = {
                 "Authorization": f"Bearer {company.unidg_jwt_token}",
                 "Content-Type": "application/json",
