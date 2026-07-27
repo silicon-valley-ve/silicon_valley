@@ -19,6 +19,7 @@ class AccountMove(models.Model):
     information = fields.Char(copy=False)
     json_enviado = fields.Text(string="JSON Enviado", copy=False)
     proximo_doc = fields.Char(compute='_compute_proximo_valor')
+    code=fields.Char(copy=False, string="Codigo de respuesta del servidor api")
 
     @api.onchange('journal_id')
     def _compute_proximo_valor(self):
