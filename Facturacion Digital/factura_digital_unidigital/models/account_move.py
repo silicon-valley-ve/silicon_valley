@@ -45,9 +45,14 @@ class AccountMove(models.Model):
             if not document_type:
                 raise UserError(_("El tipo de documento '%s' no está soportado.") % move.move_type)
 
-            # Homologación de moneda principal
+            # Homologación de Moneda Principal y Moneda de Conversión
             raw_currency = (move.currency_id.name or '').upper().strip()
-            currency_code = 'VES' if raw_currency in ('VED', 'VEF', 'BS', 'BS.S', 'VES') else raw_currency
+            if raw_currency in ('VED', 'VEF', 'BS', 'BS.S', 'VES'):
+                currency_code = 'VES'
+                conversion_currency_code = 'USD'
+            else:
+                currency_code = raw_currency
+                conversion_currency_code = 'VES'
 
             # 3. Datos del Cliente / RIF
             partner = move.partner_id
@@ -118,27 +123,34 @@ class AccountMove(models.Model):
                     "TotalAmount": line_total
                 })
 
-            # Redondeo de totales en Moneda Base (VES)
+            # Redondeo de totales en Moneda Principal (Moneda de la Factura en Odoo)
             tax_base_general = round(tax_base_general, 2)
             tax_amount_general = round(tax_amount_general, 2)
             tax_base_reduced = round(tax_base_reduced, 2)
             tax_amount_reduced = round(tax_amount_reduced, 2)
             exempt_amount = round(exempt_amount, 2)
 
-            # Suma total exacta basada en las líneas enviadas (para evitar descalces de 1 céntimo)
             total_doc = round(tax_base_general + tax_base_reduced + exempt_amount + tax_amount_general + tax_amount_reduced, 2)
 
-            # Conversión a Divisa Referencial (USD)
-            tax_base_gen_usd = round(tax_base_general / exchange_rate, 2) if exchange_rate else 0.0
-            tax_amount_gen_usd = round(tax_amount_general / exchange_rate, 2) if exchange_rate else 0.0
-            
-            tax_base_red_usd = round(tax_base_reduced / exchange_rate, 2) if exchange_rate else 0.0
-            tax_amount_red_usd = round(tax_amount_reduced / exchange_rate, 2) if exchange_rate else 0.0
+            # Lógica dinámica según si la Factura está en VES o en Divisa (USD)
+            if currency_code == 'VES':
+                # La factura es en Bolívares -> ConversionCurrency es USD (se divide entre la tasa)
+                tax_base_gen_conv = round(tax_base_general / exchange_rate, 2) if exchange_rate else 0.0
+                tax_amount_gen_conv = round(tax_amount_general / exchange_rate, 2) if exchange_rate else 0.0
+                tax_base_red_conv = round(tax_base_reduced / exchange_rate, 2) if exchange_rate else 0.0
+                tax_amount_red_conv = round(tax_amount_reduced / exchange_rate, 2) if exchange_rate else 0.0
+                exempt_conv = round(exempt_amount / exchange_rate, 2) if exchange_rate else 0.0
+                total_conv = round(total_doc / exchange_rate, 2) if exchange_rate else 0.0
+            else:
+                # La factura es en Divisa (USD) -> ConversionCurrency es VES (se multiplica por la tasa)
+                tax_base_gen_conv = round(tax_base_general * exchange_rate, 2)
+                tax_amount_gen_conv = round(tax_amount_general * exchange_rate, 2)
+                tax_base_red_conv = round(tax_base_reduced * exchange_rate, 2)
+                tax_amount_red_conv = round(tax_amount_reduced * exchange_rate, 2)
+                exempt_conv = round(exempt_amount * exchange_rate, 2)
+                total_conv = round(total_doc * exchange_rate, 2)
 
-            exempt_usd = round(exempt_amount / exchange_rate, 2) if exchange_rate else 0.0
-            total_usd = round(total_doc / exchange_rate, 2) if exchange_rate else 0.0
-
-            # 6. Payload Final siguiendo la plantilla exacta de Postman
+            # 6. Payload Final
             payload = {
                 "SerieStrongId": company.seriestrongid,
                 "SucursalStrongId": company.sucursal_strong_id or "81e836fe-eff1-4ca7-bcfd-5f079a44a503",
@@ -157,7 +169,7 @@ class AccountMove(models.Model):
                 "PreviousBalance": 0,
                 "Discount": 0,
                 
-                # Desglose de Alícuotas
+                # Desglose Moneda Principal (USD o VES)
                 "ExemptAmount": exempt_amount,
                 "TaxBase": tax_base_general,
                 "TaxPercent": 16,
@@ -171,37 +183,37 @@ class AccountMove(models.Model):
                 "TaxPercentSumptuary": 31,
                 "TaxAmountSumptuary": 0.00,
                 
-                # Sin IGTF (Porcentaje en 3 por exigencia de regla de negocio Unidigital)
+                # IGTF (Porcentaje en 3 por exigencia de regla de negocio Unidigital)
                 "IGTFPercentage": 3,
                 "IGTFBaseAmount": 0.00,
                 "IGTFAmount": 0.00,
                 
                 "Total": total_doc,
                 "GrandTotal": total_doc,
-                "AmountLetters": f"{total_doc:.2f} VES",
+                "AmountLetters": f"{total_doc:.2f} {currency_code}",
                 
                 "ExchangeRate": exchange_rate,
-                "ConversionCurrency": "USD",
+                "ConversionCurrency": conversion_currency_code,
                 "PreviousBalanceVES": 0,
                 "DiscountVES": 0,
                 
-                # Desglose Divisa Referencial (USD)
-                "ExemptAmountVES": exempt_usd,
-                "TaxBaseVES": tax_base_gen_usd,
+                # Desglose Moneda Secundaria / Conversión (Si Currency=USD -> Valores en VES)
+                "ExemptAmountVES": exempt_conv,
+                "TaxBaseVES": tax_base_gen_conv,
                 "TaxPercentVES": 16,
-                "TaxAmountVES": tax_amount_gen_usd,
+                "TaxAmountVES": tax_amount_gen_conv,
                 
-                "TaxBaseReducedVES": tax_base_red_usd,
+                "TaxBaseReducedVES": tax_base_red_conv,
                 "TaxPercentReducedVES": 8,
-                "TaxAmountReducedVES": tax_amount_red_usd,
+                "TaxAmountReducedVES": tax_amount_red_conv,
                 
                 "TaxBaseSumptuaryVES": 0.00,
                 "TaxPercentSumptuaryVES": 31,
                 "TaxAmountSumptuaryVES": 0.00,
                 
-                "TotalVES": total_usd,
-                "GrandTotalVES": total_usd,
-                "AmountLettersVES": f"{total_usd:.2f} USD",
+                "TotalVES": total_conv,
+                "GrandTotalVES": total_conv,
+                "AmountLettersVES": f"{total_conv:.2f} {conversion_currency_code}",
                 
                 "SystemReference": move.name or "",
                 "Note1": f"Documento emitido desde Odoo: {move.name}",
