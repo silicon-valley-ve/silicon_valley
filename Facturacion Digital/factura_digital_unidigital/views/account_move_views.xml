@@ -12,8 +12,15 @@
                   
                   <field name="usar_fact_digi" invisible="0"/>
                   <field name="information" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi"/>
-                  <field name="proximo_doc" string="Nro Doc. Disponible" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi"/>
-                  <field name="proximo_ctrl" string="Nro Ctrl disponible" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi"/>
+
+                  <field name="proximo_doc" 
+                   string="Nro Doc. Disponible" 
+                   invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi or state != 'draft'"/>
+
+                  <field name="proximo_ctrl" 
+                   string="Nro Ctrl disponible" 
+                   invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi or state != 'draft'"/>
+
                   <field name="code" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi"/>
                   
                 </xpath>
