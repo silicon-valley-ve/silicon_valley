@@ -26,7 +26,7 @@
                 </xpath>
 
                 <xpath expr="/form//page[@id='other_tab_entry']" position="after">
-                  <page string="Inf. Respuesta api Fact. Digital" name="studio_page_4pi_1jugr83qd">
+                  <page string="Inf. Respuesta api Fact. Digital" name="studio_page_4pi_1jugr83qd" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi">
                     <group name="studio_group_4pi">
                       <group name="studio_group_4pi_left">
                         <field name="result"/>
