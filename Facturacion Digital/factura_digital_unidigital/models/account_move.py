@@ -26,7 +26,7 @@ class AccountMove(models.Model):
             rec.proximo_doc = rec.journal_id.doc_sequence_number_next
 
     def enviar_fact_digital(self):
-        """Construye y envía el JSON del documento fiscal hacia Unidigital."""
+        """Construye y envía el JSON del documento fiscal hacia Unidigital contemplando IGTF dinámico."""
         for move in self:
             company = move.company_id
 
@@ -35,7 +35,7 @@ class AccountMove(models.Model):
             if not company.unidg_jwt_token or not company.seriestrongid:
                 raise UserError(_("No se pudo obtener el Token o la Serie de Unidigital."))
 
-            # 2. Tipo de documento
+            # 2. Tipo de documento y Homologación de Moneda
             doc_type_mapping = {
                 'out_invoice': 'FA',
                 'out_refund': 'NC',
@@ -45,7 +45,6 @@ class AccountMove(models.Model):
             if not document_type:
                 raise UserError(_("El tipo de documento '%s' no está soportado.") % move.move_type)
 
-            # Homologación de Moneda Principal y Moneda de Conversión
             raw_currency = (move.currency_id.name or '').upper().strip()
             if raw_currency in ('VED', 'VEF', 'BS', 'BS.S', 'VES'):
                 currency_code = 'VES'
@@ -85,12 +84,10 @@ class AccountMove(models.Model):
                 tax_code = "G"
                 tax_percent = 16
 
-                # Subtotales e impuestos por línea redondeados
                 line_subtotal = round(line.price_subtotal, 2)
                 line_tax_amount = round(line.price_total - line.price_subtotal, 2)
                 line_total = round(line.price_total, 2)
 
-                # Clasificación por alícuota
                 if aliquot == 'exempt' or tax_rate_amount == 0:
                     is_exempt = True
                     tax_code = "E"
@@ -123,7 +120,7 @@ class AccountMove(models.Model):
                     "TotalAmount": line_total
                 })
 
-            # Redondeo de totales en Moneda Principal (Moneda de la Factura en Odoo)
+            # Redondeo de totales base del documento
             tax_base_general = round(tax_base_general, 2)
             tax_amount_general = round(tax_amount_general, 2)
             tax_base_reduced = round(tax_base_reduced, 2)
@@ -132,25 +129,73 @@ class AccountMove(models.Model):
 
             total_doc = round(tax_base_general + tax_base_reduced + exempt_amount + tax_amount_general + tax_amount_reduced, 2)
 
-            # Lógica dinámica según si la Factura está en VES o en Divisa (USD)
+            # =========================================================================
+            # LÓGICA DE CÁLCULO DE IGTF (CONTADO VS CRÉDITO)
+            # =========================================================================
+            igtf_base = 0.0
+            igtf_amount = 0.0
+            payment_type_str = "CONTADO"
+
+            cond_fact = getattr(move, 'cond_fact', 'cont')
+
+            if cond_fact == 'cred':
+                payment_type_str = "CREDITO"
+                # A crédito: Si es USD aplica sobre el total, si es Bs no aplica
+                if currency_code == 'USD':
+                    igtf_base = total_doc
+                    igtf_amount = round(total_doc * 0.03, 2)
+                else:
+                    igtf_base = 0.0
+                    igtf_amount = 0.0
+            else:
+                payment_type_str = "CONTADO"
+                # A contado: Evaluar los pagos en Divisa registrados en account.payment.fact
+                pagos_divisa = self.env['account.payment.fact'].search([
+                    ('move_id', '=', move.id),
+                    ('porcentage', '>', 0)
+                ])
+
+                if pagos_divisa:
+                    if currency_code == 'VES':
+                        igtf_base = sum(p.monta_a_pagar_bs for p in pagos_divisa)
+                        igtf_amount = sum(p.monto_ret_bs for p in pagos_divisa)
+                    else:
+                        igtf_base = sum(p.monta_a_pagar for p in pagos_divisa)
+                        igtf_amount = sum(p.monta_a_pagar * (p.porcentage / 100.0) for p in pagos_divisa)
+
+                igtf_base = round(igtf_base, 2)
+                igtf_amount = round(igtf_amount, 2)
+
+            # Gran Total con IGTF incluido
+            grand_total = round(total_doc + igtf_amount, 2)
+
+            # =========================================================================
+            # CONVERSIÓN A MONEDA SECUNDARIA
+            # =========================================================================
             if currency_code == 'VES':
-                # La factura es en Bolívares -> ConversionCurrency es USD (se divide entre la tasa)
                 tax_base_gen_conv = round(tax_base_general / exchange_rate, 2) if exchange_rate else 0.0
                 tax_amount_gen_conv = round(tax_amount_general / exchange_rate, 2) if exchange_rate else 0.0
                 tax_base_red_conv = round(tax_base_reduced / exchange_rate, 2) if exchange_rate else 0.0
                 tax_amount_red_conv = round(tax_amount_reduced / exchange_rate, 2) if exchange_rate else 0.0
                 exempt_conv = round(exempt_amount / exchange_rate, 2) if exchange_rate else 0.0
                 total_conv = round(total_doc / exchange_rate, 2) if exchange_rate else 0.0
+                
+                igtf_base_conv = round(igtf_base / exchange_rate, 2) if exchange_rate else 0.0
+                igtf_amount_conv = round(igtf_amount / exchange_rate, 2) if exchange_rate else 0.0
+                grand_total_conv = round(grand_total / exchange_rate, 2) if exchange_rate else 0.0
             else:
-                # La factura es en Divisa (USD) -> ConversionCurrency es VES (se multiplica por la tasa)
                 tax_base_gen_conv = round(tax_base_general * exchange_rate, 2)
                 tax_amount_gen_conv = round(tax_amount_general * exchange_rate, 2)
                 tax_base_red_conv = round(tax_base_reduced * exchange_rate, 2)
                 tax_amount_red_conv = round(tax_amount_reduced * exchange_rate, 2)
                 exempt_conv = round(exempt_amount * exchange_rate, 2)
                 total_conv = round(total_doc * exchange_rate, 2)
+                
+                igtf_base_conv = round(igtf_base * exchange_rate, 2)
+                igtf_amount_conv = round(igtf_amount * exchange_rate, 2)
+                grand_total_conv = round(grand_total * exchange_rate, 2)
 
-            # 6. Payload Final
+            # 6. Payload Final hacia Unidigital
             payload = {
                 "SerieStrongId": company.seriestrongid,
                 "SucursalStrongId": company.sucursal_strong_id or "81e836fe-eff1-4ca7-bcfd-5f079a44a503",
@@ -164,12 +209,12 @@ class AccountMove(models.Model):
                 "Phone": partner.phone or partner.mobile or "02120000000",
                 "EmailTo": partner.email or "api@unidigital.global",
                 "EmailCc": company.email or "api@unidigital.global",
-                "PaymentType": "CONTADO",
+                "PaymentType": payment_type_str,
                 "Currency": currency_code,
                 "PreviousBalance": 0,
                 "Discount": 0,
                 
-                # Desglose Moneda Principal (USD o VES)
+                # Alícuotas
                 "ExemptAmount": exempt_amount,
                 "TaxBase": tax_base_general,
                 "TaxPercent": 16,
@@ -183,21 +228,21 @@ class AccountMove(models.Model):
                 "TaxPercentSumptuary": 31,
                 "TaxAmountSumptuary": 0.00,
                 
-                # IGTF (Porcentaje en 3 por exigencia de regla de negocio Unidigital)
+                # Configuración de IGTF Dinámica (IGTFPercentage siempre en 3 por regla de la API)
                 "IGTFPercentage": 3,
-                "IGTFBaseAmount": 0.00,
-                "IGTFAmount": 0.00,
+                "IGTFBaseAmount": igtf_base,
+                "IGTFAmount": igtf_amount,
                 
                 "Total": total_doc,
-                "GrandTotal": total_doc,
-                "AmountLetters": f"{total_doc:.2f} {currency_code}",
+                "GrandTotal": grand_total,
+                "AmountLetters": f"{grand_total:.2f} {currency_code}",
                 
                 "ExchangeRate": exchange_rate,
                 "ConversionCurrency": conversion_currency_code,
                 "PreviousBalanceVES": 0,
                 "DiscountVES": 0,
                 
-                # Desglose Moneda Secundaria / Conversión (Si Currency=USD -> Valores en VES)
+                # Valores Convertidos
                 "ExemptAmountVES": exempt_conv,
                 "TaxBaseVES": tax_base_gen_conv,
                 "TaxPercentVES": 16,
@@ -211,9 +256,12 @@ class AccountMove(models.Model):
                 "TaxPercentSumptuaryVES": 31,
                 "TaxAmountSumptuaryVES": 0.00,
                 
+                "IGTFBaseAmountVES": igtf_base_conv if currency_code == 'USD' else igtf_base,
+                "IGTFAmountVES": igtf_amount_conv if currency_code == 'USD' else igtf_amount,
+                
                 "TotalVES": total_conv,
-                "GrandTotalVES": total_conv,
-                "AmountLettersVES": f"{total_conv:.2f} {conversion_currency_code}",
+                "GrandTotalVES": grand_total_conv,
+                "AmountLettersVES": f"{grand_total_conv:.2f} {conversion_currency_code}",
                 
                 "SystemReference": move.name or "",
                 "Note1": f"Documento emitido desde Odoo: {move.name}",
