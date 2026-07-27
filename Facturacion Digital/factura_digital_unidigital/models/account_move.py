@@ -32,30 +32,37 @@ class AccountMove(models.Model):
     def print_digital(self):
         """
         Abre en una nueva pestaña la URL de consulta de la factura digital 
-        almacenada en el campo urlConsulta.
+        construida a partir de la respuesta de Unidigital guardada en 'result'.
         """
-        xx='c3bb97a2-d502-4d62-ba5f-6e586dd6acc0'
-        if self.company_id.usar_fact_digi==True:
-            url=self.company_id.url+self.company_id.endpoint_pdf_doc+"/"+xx #self.result
-            if url:
-                self.ensure_one()
+        self.ensure_one()
 
-                #url = self.urlConsulta
-                
-                if not url:
-                    # Puedes usar _logger.warning en lugar de UserError si solo quieres un mensaje
-                    raise UserError("No se encontró la URL de consulta de la factura digital. Asegúrese de que la factura se haya emitido correctamente.")
-                    
-                # Devolver el diccionario de acción para abrir la URL
-                return {
-                    'type': 'ir.actions.act_url',
-                    'url': url,
-                    'target': 'new',  # Recomendado para abrir en una pestaña nueva
-                }
-            else:
-                raise UserError(_("No hay documento fiscal recibido de la imprenta digital"))
+        if not self.company_id.usar_fact_digi:
+            raise UserError(_("Esta compañía no tiene habilitada la factura digital."))
+
+        if not self.result:
+            raise UserError(_("No hay un identificador de documento fiscal recibido de la imprenta digital."))
+
+        # Limpia comillas dobles o espacios adicionales del valor guardado en self.result
+        clean_result = str(self.result).strip('"\'' ).strip()
+
+        if not clean_result:
+            raise UserError(_("El código de documento fiscal no es válido."))
+
+        # Construir la URL concatenando la compañía, el endpoint y el UUID limpio
+        base_url = (self.company_id.url or '').strip()
+        endpoint = (self.company_id.endpoint_pdf_doc or '').strip()
+        
+        # Asegura que las barras diagonales (/) no se dupliquen o falten
+        if not base_url.endswith('/') and not endpoint.startswith('/'):
+            target_url = f"{base_url}/{endpoint}/{clean_result}"
         else:
-            raise UserError(_("No esta habilitada esta compañia para trabajar con factura digital sino factura forma libre."))
+            target_url = f"{base_url}{endpoint}/{clean_result}"
+
+        return {
+            'type': 'ir.actions.act_url',
+            'url': target_url,
+            'target': 'new',
+        }
 
 
 
