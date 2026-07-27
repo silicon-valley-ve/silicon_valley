@@ -14,6 +14,8 @@
 
                   <field name="enpoint" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
 
+                  <field name="enpoint_emision" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
+
                   <field name="unidg_api_user" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
 
                   <field name="unidg_api_password" invisible="usar_fact_digi==False" required="usar_fact_digi==True"/>
