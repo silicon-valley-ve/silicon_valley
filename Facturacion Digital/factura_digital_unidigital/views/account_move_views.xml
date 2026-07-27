@@ -21,7 +21,7 @@
                    string="Nro Ctrl disponible" 
                    invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi or state != 'draft'"/>
 
-                  <field name="code" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi" readonly="state!='draft'" decoration-success="code == '200'" decoration-danger="code and code != '200'"/>
+                  <field name="code" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi" readonly="state!='draft'" class="fw-bold" decoration-success="code == '200'" decoration-danger="code and code != '200'"/>
                   
                 </xpath>
 
@@ -33,7 +33,7 @@
                         <field name="hasErrors" string="Hubo Error?" readonly="state!='draft'"/>
                         <field name="errorMessage" string="Mensaje de error" readonly="state!='draft'"/>
                         <field name="information" string="Informacion:" readonly="state!='draft'"/>
-                        <field name="code" readonly="state!='draft'" decoration-success="code == '200'" decoration-danger="code and code != '200'"/>
+                        <field name="code" readonly="state!='draft'" class="fw-bold" decoration-success="code == '200'" decoration-danger="code and code != '200'"/>
                       </group>
                       <group name="studio_group_4pi_right">
                         <field name="json_enviado" readonly="state!='draft'"/>
