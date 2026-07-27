@@ -36,7 +36,9 @@ class AccountMove(models.Model):
     def confirmar2(self):
         for rec in self:
             if rec.company_id.usar_fact_digi==True:
-                pass
+                rec.enviar_fact_digital()
+                if rec.code=='200':
+                    rec.action_post()
 
 
 
