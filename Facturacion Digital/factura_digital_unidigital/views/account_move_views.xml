@@ -26,17 +26,17 @@
                 </xpath>
 
                 <xpath expr="/form//page[@id='other_tab_entry']" position="after">
-                  <page string="Inf. Respuesta api Fact. Digital" name="studio_page_4pi_1jugr83qd" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi" readonly="state!='draft'">
+                  <page string="Inf. Respuesta api Fact. Digital" name="studio_page_4pi_1jugr83qd" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi">
                     <group name="studio_group_4pi">
                       <group name="studio_group_4pi_left">
-                        <field name="result"/>
-                        <field name="hasErrors" string="Hubo Error?"/>
-                        <field name="errorMessage" string="Mensaje de error"/>
-                        <field name="information" string="Informacion:"/>
-                        <field name="code"/>
+                        <field name="result" readonly="state!='draft'"/>
+                        <field name="hasErrors" string="Hubo Error?" readonly="state!='draft'"/>
+                        <field name="errorMessage" string="Mensaje de error" readonly="state!='draft'"/>
+                        <field name="information" string="Informacion:" readonly="state!='draft'"/>
+                        <field name="code" readonly="state!='draft'"/>
                       </group>
                       <group name="studio_group_4pi_right">
-                        <field name="json_enviado"/>
+                        <field name="json_enviado" readonly="state!='draft'"/>
                       </group>
                     </group>
                   </page>
