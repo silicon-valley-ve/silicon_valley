@@ -53,8 +53,8 @@
                 </xpath-->
 
                 <xpath expr="/form/header/button[@name='action_post'][2]" position="attributes">
-                    <attribute name="invisible">hide_post_button or move_type == 'entry' or display_inactive_currency_warning or not usar_fact_digi or move_type in ('out_invoice', 'out_refund', 'out_receipt')</attribute>
-                </xpath>
+    <attribute name="invisible">hide_post_button or move_type == 'entry' or display_inactive_currency_warning or (usar_fact_digi and move_type in ('out_invoice', 'out_refund', 'out_receipt'))</attribute>
+</xpath>
 
                 <xpath expr="//button[@id='account_invoice_payment_btn']" position="after">
                          <!--button name="enviar_fact_digital" string="simular envio" type="object" /-->
