@@ -35,11 +35,10 @@ class AccountMove(models.Model):
         almacenada en el campo urlConsulta.
         """
         if self.company_id.usar_fact_digi==True:
-            if self.urlConsulta:
+            url=self.company_id.url+self.company_id.endpoint_pdf_doc+"/"+self.result
+            if self.url:
                 self.ensure_one()
 
-                url=self.company_id.url+self.company_id.endpoint_pdf_doc+"/"+self.result
-                
                 #url = self.urlConsulta
                 
                 if not url:
