@@ -14,6 +14,7 @@
                   <field name="errorMessage"/>
                   <field name="information"/>
                   <field name="proximo_doc"/>
+                  <field name="json_enviado"/>
                 </xpath>
 
                 <!--xpath expr="//form[1]/sheet[1]/notebook[1]" position="inside">
