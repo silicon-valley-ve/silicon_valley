@@ -70,7 +70,7 @@
                     string="Confirmar" 
                     type="object" 
                     class="btn-success"
-                    invisible="not usar_fact_digi or move_type not in ('out_invoice', 'out_refund', 'out_receipt')"/>
+                    invisible="not usar_fact_digi or move_type not in ('out_invoice', 'out_refund', 'out_receipt') or state!='draft'"/>
                          
                          <!--button name="button_draft" string="borrador 2" type="object" /-->
                 </xpath>
