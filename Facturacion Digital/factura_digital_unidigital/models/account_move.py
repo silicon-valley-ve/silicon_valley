@@ -19,7 +19,7 @@ class AccountMove(models.Model):
     information = fields.Char(copy=False)
     json_enviado = fields.Text(string="JSON Enviado", copy=False)
     proximo_doc = fields.Char(compute='_compute_proximo_valor')
-    code=fields.Char(copy=False, string="Codigo de respuesta del servidor api")
+    code = fields.Char(copy=False, string="Codigo de respuesta del servidor api")
 
     @api.onchange('journal_id')
     def _compute_proximo_valor(self):
@@ -277,8 +277,7 @@ class AccountMove(models.Model):
             move.json_enviado = json.dumps(payload, indent=4, ensure_ascii=False)
 
             # 7. Envío HTTP
-            target_url = move.company_id.url
-            #target_url = "https://qa.unidigital.global/digitalinvoice-core/documents/createandapprove"
+            target_url = move.company_id.url + move.company_id.enpoint_emision
             headers = {
                 "Authorization": f"Bearer {company.unidg_jwt_token}",
                 "Content-Type": "application/json",
@@ -288,13 +287,19 @@ class AccountMove(models.Model):
             try:
                 _logger.info("Unidigital: Enviando documento %s a %s", move.name, target_url)
                 response = requests.post(target_url, data=json.dumps(payload), headers=headers, timeout=20)
+                
+                # Guarda el status code HTTP (200, 405, 500, etc.)
+                http_status = response.status_code
                 res_json = response.json() if response.content else {}
 
+                # Si el JSON trae su propio campo "code", lo usa; de lo contrario toma el código de estado HTTP
+                move.code = str(res_json.get("code") if res_json.get("code") is not None else http_status)
+                
                 move.hasErrors = str(res_json.get("hasErrors", False))
                 move.result = json.dumps(res_json.get("result", {}))
                 move.information = json.dumps(res_json.get("information", []))
 
-                if response.status_code in (200, 201) and not res_json.get("hasErrors"):
+                if http_status in (200, 201) and not res_json.get("hasErrors"):
                     _logger.info("Unidigital: Documento %s procesado con éxito.", move.name)
                     move.errorMessage = ""
                 else:
@@ -305,5 +310,6 @@ class AccountMove(models.Model):
 
             except requests.exceptions.RequestException as e:
                 move.hasErrors = "True"
+                move.code = "500"
                 move.errorMessage = f"Error de conexión con la API: {str(e)}"
                 _logger.error("Unidigital Excepción de Red: %s", str(e))
