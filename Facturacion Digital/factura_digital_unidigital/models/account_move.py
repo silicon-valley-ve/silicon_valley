@@ -29,6 +29,37 @@ class AccountMove(models.Model):
         store=True  # Opcional: ver notas abajo
     )
 
+    def print_digital(self):
+        """
+        Abre en una nueva pestaña la URL de consulta de la factura digital 
+        almacenada en el campo urlConsulta.
+        """
+        if self.company_id.usar_fact_digi==True:
+            if self.urlConsulta:
+                self.ensure_one()
+
+                url=self.company_id.url+self.company_id.endpoint_pdf_doc+"/"+self.result
+                
+                #url = self.urlConsulta
+                
+                if not url:
+                    # Puedes usar _logger.warning en lugar de UserError si solo quieres un mensaje
+                    raise UserError("No se encontró la URL de consulta de la factura digital. Asegúrese de que la factura se haya emitido correctamente.")
+                    
+                # Devolver el diccionario de acción para abrir la URL
+                return {
+                    'type': 'ir.actions.act_url',
+                    'url': url,
+                    'target': 'new',  # Recomendado para abrir en una pestaña nueva
+                }
+            else:
+                raise UserError(_("No hay documento fiscal recibido de la imprenta digital"))
+        else:
+            raise UserError(_("No esta habilitada esta compañia para trabajar con factura digital sino factura forma libre."))
+
+
+
+
     @api.onchange('journal_id')
     def _compute_proximo_valor(self):
         for rec in self:

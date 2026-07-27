@@ -34,6 +34,7 @@ class ResCompany(models.Model):
     mensaje = fields.Char(readonly=True, copy=False)
 
     enpoint_emision = fields.Char(string="Endpoint Emisión", copy=False, default='/documents/createandapprove')
+    endpoint_pdf_doc = fields.Char(string="Endpoint vista Documentos", default="/documents/view")
     enpoint_ultimo_doc = fields.Char(string="Endpoint Último Documento", copy=False)
     seriestrongid = fields.Char(string="SerieStrOngid",copy=False,readonly=True) 
     sucursal_strong_id = fields.Char(string="SucursalStrongId",copy=False, default="81e836fe-eff1-4ca7-bcfd-5f079a44a503")
