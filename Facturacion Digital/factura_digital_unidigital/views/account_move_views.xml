@@ -21,7 +21,7 @@
                    string="Nro Ctrl disponible" 
                    invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi or state != 'draft'"/>
 
-                  <field name="code" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi" readonly="state!='draft'"/>
+                  <field name="code" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi" readonly="state!='draft'" decoration-success="code == '200'" decoration-danger="code and code != '200'"/>
                   
                 </xpath>
 
