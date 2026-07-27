@@ -10,8 +10,8 @@
             <field name="arch" type="xml">
                 <xpath expr="/form//field[@name='observacion']" position="after">
                   
-                  <field name="usar_fact_digi" invisible="0"/>
-                  <field name="information" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi"/>
+                  <field name="usar_fact_digi" invisible="1"/>
+                  <field name="information" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi" readonly="state!='draft'"/>
 
                   <field name="proximo_doc" 
                    string="Nro Doc. Disponible" 
@@ -21,12 +21,12 @@
                    string="Nro Ctrl disponible" 
                    invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi or state != 'draft'"/>
 
-                  <field name="code" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi"/>
+                  <field name="code" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi" readonly="state!='draft'"/>
                   
                 </xpath>
 
                 <xpath expr="/form//page[@id='other_tab_entry']" position="after">
-                  <page string="Inf. Respuesta api Fact. Digital" name="studio_page_4pi_1jugr83qd" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi">
+                  <page string="Inf. Respuesta api Fact. Digital" name="studio_page_4pi_1jugr83qd" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi" readonly="state!='draft'">
                     <group name="studio_group_4pi">
                       <group name="studio_group_4pi_left">
                         <field name="result"/>
