@@ -11,10 +11,10 @@
                 <xpath expr="/form//field[@name='observacion']" position="after">
                   
                   <field name="usar_fact_digi" invisible="0"/>
-                  <field name="information"/>
-                  <field name="proximo_doc" string="Nro Doc. Disponible"/>
-                  <field name="proximo_ctrl" string="Nro Ctrl disponible"/>
-                  <field name="code"/>
+                  <field name="information" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi"/>
+                  <field name="proximo_doc" string="Nro Doc. Disponible" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi"/>
+                  <field name="proximo_ctrl" string="Nro Ctrl disponible" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi"/>
+                  <field name="code" invisible="move_type not in ('out_invoice', 'out_refund', 'out_receipt') or not usar_fact_digi"/>
                   
                 </xpath>
 
