@@ -26,7 +26,7 @@ class AccountMove(models.Model):
             rec.proximo_doc = rec.journal_id.doc_sequence_number_next
 
     def enviar_fact_digital(self):
-        """Construye y envía el JSON del documento fiscal hacia Unidigital contemplando IGTF dinámico."""
+        """Construye y envía el JSON del documento fiscal hacia Unidigital basándose en la especificación exacta."""
         for move in self:
             company = move.company_id
 
@@ -106,18 +106,17 @@ class AccountMove(models.Model):
 
                 details.append({
                     "Description": line.name or "Producto/Servicio",
-                    "ProductType": 1,
                     "Quantity": line.quantity,
                     "UnitPrice": line.price_unit,
                     "Amount": line_subtotal,
-                    "Discount": 0,
-                    "AmountPlusDiscount": line_subtotal,
-                    "TaxCode": tax_code,
-                    "TaxPercent": tax_percent,
                     "TaxAmount": line_tax_amount,
+                    "TaxPercent": tax_percent,
+                    "TaxCode": tax_code,
                     "IsExempt": is_exempt,
                     "OperationCode": "C001",
-                    "TotalAmount": line_total
+                    "AmountPlusDiscount": line_subtotal,
+                    "TotalAmount": line_total,
+                    "ProductType": 1
                 })
 
             # Redondeo de totales base del documento
@@ -127,29 +126,27 @@ class AccountMove(models.Model):
             tax_amount_reduced = round(tax_amount_reduced, 2)
             exempt_amount = round(exempt_amount, 2)
 
-            total_doc = round(tax_base_general + tax_base_reduced + exempt_amount + tax_amount_general + tax_amount_reduced, 2)
+            subtotal_doc = round(tax_base_general + tax_base_reduced + exempt_amount, 2)
+            taxes_doc = round(tax_amount_general + tax_amount_reduced, 2)
+            total_doc = round(subtotal_doc + taxes_doc, 2)
 
             # =========================================================================
             # LÓGICA DE CÁLCULO DE IGTF (CONTADO VS CRÉDITO)
             # =========================================================================
-            igtf_base = 0.0
-            igtf_amount = 0.0
+            igtf_base_main = 0.0
+            igtf_amount_main = 0.0
             payment_type_str = "CONTADO"
 
             cond_fact = getattr(move, 'cond_fact', 'cont')
 
             if cond_fact == 'cred':
                 payment_type_str = "CREDITO"
-                # A crédito: Si es USD aplica sobre el total, si es Bs no aplica
                 if currency_code == 'USD':
-                    igtf_base = total_doc
-                    igtf_amount = round(total_doc * 0.03, 2)
-                else:
-                    igtf_base = 0.0
-                    igtf_amount = 0.0
+                    igtf_base_main = total_doc
+                    igtf_amount_main = round(total_doc * 0.03, 2)
             else:
                 payment_type_str = "CONTADO"
-                # Se busca por 'move_id' (almacenado) y se filtra 'porcentage' en memoria con Python
+                # Buscar pagos en el modelo custom y filtrar en memoria por campo no-stored
                 pagos_todos = self.env['account.payment.fact'].search([
                     ('move_id', '=', move.id)
                 ])
@@ -157,42 +154,44 @@ class AccountMove(models.Model):
 
                 if pagos_divisa:
                     if currency_code == 'VES':
-                        igtf_base = sum(p.monta_a_pagar_bs for p in pagos_divisa)
-                        igtf_amount = sum(p.monto_ret_bs for p in pagos_divisa)
+                        # Para documento en VES, la base/monto principal del IGTF se envía en VES
+                        igtf_base_main = sum(p.monta_a_pagar_bs for p in pagos_divisa)
+                        igtf_amount_main = sum(p.monto_ret_bs for p in pagos_divisa)
                     else:
-                        igtf_base = sum(p.monta_a_pagar for p in pagos_divisa)
-                        igtf_amount = sum(p.monta_a_pagar * (p.porcentage / 100.0) for p in pagos_divisa)
+                        igtf_base_main = sum(p.monta_a_pagar for p in pagos_divisa)
+                        igtf_amount_main = sum(p.monta_a_pagar * (p.porcentage / 100.0) for p in pagos_divisa)
 
-            igtf_base = round(igtf_base, 2)
-            igtf_amount = round(igtf_amount, 2)
+            igtf_base_main = round(igtf_base_main, 2)
+            igtf_amount_main = round(igtf_amount_main, 2)
 
-            # Gran Total con IGTF incluido
-            grand_total = round(total_doc + igtf_amount, 2)
+            grand_total = round(total_doc + igtf_amount_main, 2)
 
             # =========================================================================
             # CONVERSIÓN A MONEDA SECUNDARIA
             # =========================================================================
             if currency_code == 'VES':
-                tax_base_gen_conv = round(tax_base_general / exchange_rate, 2) if exchange_rate else 0.0
-                tax_amount_gen_conv = round(tax_amount_general / exchange_rate, 2) if exchange_rate else 0.0
-                tax_base_red_conv = round(tax_base_reduced / exchange_rate, 2) if exchange_rate else 0.0
-                tax_amount_red_conv = round(tax_amount_reduced / exchange_rate, 2) if exchange_rate else 0.0
                 exempt_conv = round(exempt_amount / exchange_rate, 2) if exchange_rate else 0.0
+                tax_base_gen_conv = round(tax_base_general / exchange_rate, 2) if exchange_rate else 0.0
+                tax_base_red_conv = round(tax_base_reduced / exchange_rate, 2) if exchange_rate else 0.0
+                subtotal_conv = round(subtotal_doc / exchange_rate, 2) if exchange_rate else 0.0
+                tax_amount_gen_conv = round(tax_amount_general / exchange_rate, 2) if exchange_rate else 0.0
+                tax_amount_red_conv = round(tax_amount_reduced / exchange_rate, 2) if exchange_rate else 0.0
                 total_conv = round(total_doc / exchange_rate, 2) if exchange_rate else 0.0
 
-                igtf_base_conv = round(igtf_base / exchange_rate, 2) if exchange_rate else 0.0
-                igtf_amount_conv = round(igtf_amount / exchange_rate, 2) if exchange_rate else 0.0
+                igtf_base_conv = round(igtf_base_main / exchange_rate, 2) if exchange_rate else 0.0
+                igtf_amount_conv = round(igtf_amount_main / exchange_rate, 2) if exchange_rate else 0.0
                 grand_total_conv = round(grand_total / exchange_rate, 2) if exchange_rate else 0.0
             else:
-                tax_base_gen_conv = round(tax_base_general * exchange_rate, 2)
-                tax_amount_gen_conv = round(tax_amount_general * exchange_rate, 2)
-                tax_base_red_conv = round(tax_base_reduced * exchange_rate, 2)
-                tax_amount_red_conv = round(tax_amount_reduced * exchange_rate, 2)
                 exempt_conv = round(exempt_amount * exchange_rate, 2)
+                tax_base_gen_conv = round(tax_base_general * exchange_rate, 2)
+                tax_base_red_conv = round(tax_base_reduced * exchange_rate, 2)
+                subtotal_conv = round(subtotal_doc * exchange_rate, 2)
+                tax_amount_gen_conv = round(tax_amount_general * exchange_rate, 2)
+                tax_amount_red_conv = round(tax_amount_reduced * exchange_rate, 2)
                 total_conv = round(total_doc * exchange_rate, 2)
 
-                igtf_base_conv = round(igtf_base * exchange_rate, 2)
-                igtf_amount_conv = round(igtf_amount * exchange_rate, 2)
+                igtf_base_conv = round(igtf_base_main * exchange_rate, 2)
+                igtf_amount_conv = round(igtf_amount_main * exchange_rate, 2)
                 grand_total_conv = round(grand_total * exchange_rate, 2)
 
             # 6. Payload Final hacia Unidigital
@@ -208,67 +207,63 @@ class AccountMove(models.Model):
                 "Address": partner.street or "Caracas, Venezuela",
                 "Phone": partner.phone or partner.mobile or "02120000000",
                 "EmailTo": partner.email or "api@unidigital.global",
-                "EmailCc": company.email or "api@unidigital.global",
                 "PaymentType": payment_type_str,
                 "Currency": currency_code,
-                "PreviousBalance": 0,
-                "Discount": 0,
-
-                # Alícuotas
+                
+                # Subtotales e Impuestos principales
                 "ExemptAmount": exempt_amount,
                 "TaxBase": tax_base_general,
-                "TaxPercent": 16,
-                "TaxAmount": tax_amount_general,
-
                 "TaxBaseReduced": tax_base_reduced,
+                "Subtotal": subtotal_doc,
+                "Discount": 0,
+                "PreviousBalance": 0,
+                "SubtotalPlusDiscount": subtotal_doc,
+
+                "TaxPercent": 16,
                 "TaxPercentReduced": 8,
-                "TaxAmountReduced": tax_amount_reduced,
-
-                "TaxBaseSumptuary": 0.00,
                 "TaxPercentSumptuary": 31,
+                "TaxAmount": tax_amount_general,
+                "TaxAmountReduced": tax_amount_reduced,
                 "TaxAmountSumptuary": 0.00,
-
-                # Configuración de IGTF Dinámica (IGTFPercentage en 3 por especificación de la API)
-                "IGTFPercentage": 3,
-                "IGTFBaseAmount": igtf_base,
-                "IGTFAmount": igtf_amount,
-
+                "Taxes": taxes_doc,
                 "Total": total_doc,
+
+                # IGTF principal
+                "IGTFBaseAmount": igtf_base_main,
+                "IGTFAmount": igtf_amount_main,
+                "IGTFPercentage": 3,
                 "GrandTotal": grand_total,
                 "AmountLetters": f"{grand_total:.2f} {currency_code}",
 
-                "ExchangeRate": exchange_rate,
                 "ConversionCurrency": conversion_currency_code,
-                "PreviousBalanceVES": 0,
-                "DiscountVES": 0,
 
-                # Valores Convertidos
+                # Conversión / Valores secundarios (USD si la moneda es VES)
                 "ExemptAmountVES": exempt_conv,
                 "TaxBaseVES": tax_base_gen_conv,
-                "TaxPercentVES": 16,
-                "TaxAmountVES": tax_amount_gen_conv,
-
                 "TaxBaseReducedVES": tax_base_red_conv,
-                "TaxPercentReducedVES": 8,
-                "TaxAmountReducedVES": tax_amount_red_conv,
-
-                "TaxBaseSumptuaryVES": 0.00,
                 "TaxPercentSumptuaryVES": 31,
+                "SubtotalVES": subtotal_conv,
+                "PreviousBalanceVES": 0,
+                "DiscountVES": 0,
+                "SubtotalPlusDiscountVES": subtotal_conv,
+
+                "TaxAmountVES": tax_amount_gen_conv,
+                "TaxAmountReducedVES": tax_amount_red_conv,
                 "TaxAmountSumptuaryVES": 0.00,
-
-                "IGTFBaseAmountVES": igtf_base_conv if currency_code == 'USD' else igtf_base,
-                "IGTFAmountVES": igtf_amount_conv if currency_code == 'USD' else igtf_amount,
-
                 "TotalVES": total_conv,
+
+                # IGTF Convertido
+                "IGTFBaseAmountVES": igtf_base_conv,
+                "IGTFAmountVES": igtf_amount_conv,
                 "GrandTotalVES": grand_total_conv,
                 "AmountLettersVES": f"{grand_total_conv:.2f} {conversion_currency_code}",
 
+                "ExchangeRate": exchange_rate,
                 "SystemReference": move.name or "",
                 "Note1": f"Documento emitido desde Odoo: {move.name}",
                 "Note2": "",
                 "Note3": "",
                 "Extra": {},
-                "ShippingAddress": partner.street or "Caracas, Venezuela",
                 "Details": details
             }
 
