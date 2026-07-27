@@ -33,7 +33,7 @@
                         <field name="hasErrors" string="Hubo Error?" readonly="state!='draft'"/>
                         <field name="errorMessage" string="Mensaje de error" readonly="state!='draft'"/>
                         <field name="information" string="Informacion:" readonly="state!='draft'"/>
-                        <field name="code" readonly="state!='draft'"/>
+                        <field name="code" readonly="state!='draft'" decoration-success="code == '200'" decoration-danger="code and code != '200'"/>
                       </group>
                       <group name="studio_group_4pi_right">
                         <field name="json_enviado" readonly="state!='draft'"/>
