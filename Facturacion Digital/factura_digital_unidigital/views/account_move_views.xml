@@ -12,7 +12,8 @@
                   
                   <field name="usar_fact_digi" invisible="0"/>
                   <field name="information"/>
-                  <field name="proximo_doc"/>
+                  <field name="proximo_doc" string="Nro Doc. Disponible"/>
+                  <field name="proximo_ctrl" string="Nro Ctrl disponible"/>
                   <field name="code"/>
                   
                 </xpath>

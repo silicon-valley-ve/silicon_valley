@@ -19,6 +19,7 @@ class AccountMove(models.Model):
     information = fields.Char(copy=False)
     json_enviado = fields.Text(string="JSON Enviado", copy=False)
     proximo_doc = fields.Char(compute='_compute_proximo_valor')
+    proximo_ctrl = fields.Char(compute='_compute_proximo_ctrl')
     code = fields.Char(copy=False, string="Codigo de respuesta del servidor api")
 
     usar_fact_digi = fields.Boolean(
@@ -32,6 +33,11 @@ class AccountMove(models.Model):
     def _compute_proximo_valor(self):
         for rec in self:
             rec.proximo_doc = rec.journal_id.doc_sequence_number_next
+
+    @api.onchange('journal_id')
+    def _compute_proximo_ctrl(self):
+        for rec in self:
+            rec.proximo_ctrl = rec.journal_id.ctrl_sequence_number_next
 
     def confirmar2(self):
         for rec in self:
