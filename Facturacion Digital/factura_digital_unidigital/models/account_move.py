@@ -21,10 +21,24 @@ class AccountMove(models.Model):
     proximo_doc = fields.Char(compute='_compute_proximo_valor')
     code = fields.Char(copy=False, string="Codigo de respuesta del servidor api")
 
+    usar_fact_digi = fields.Boolean(
+        related='company_id.usar_fact_digi',
+        string="Usar Facturación Digital",
+        readonly=True,
+        store=True  # Opcional: ver notas abajo
+    )
+
     @api.onchange('journal_id')
     def _compute_proximo_valor(self):
         for rec in self:
             rec.proximo_doc = rec.journal_id.doc_sequence_number_next
+
+    def confirmar2(self):
+        for rec in self:
+            if rec.company_id.usar_fact_digi==True:
+                pass
+
+
 
     def enviar_fact_digital(self):
         """Construye y envía el JSON del documento fiscal hacia Unidigital basándose en la especificación exacta."""

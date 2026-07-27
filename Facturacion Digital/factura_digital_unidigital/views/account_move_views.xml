@@ -10,6 +10,7 @@
             <field name="arch" type="xml">
                 <xpath expr="/form//field[@name='observacion']" position="after">
                   
+                  <field name="usar_fact_digi" invisible="0"/>
                   <field name="information"/>
                   <field name="proximo_doc"/>
                   <field name="code"/>
@@ -52,6 +53,8 @@
 
                 <xpath expr="//button[@id='account_invoice_payment_btn']" position="after">
                          <button name="enviar_fact_digital" string="simular envio" type="object" />
+
+                         <button name="confirmar2" string="Confirmar" type="object" />
                          
                          <!--button name="button_draft" string="borrador 2" type="object" /-->
                 </xpath>
