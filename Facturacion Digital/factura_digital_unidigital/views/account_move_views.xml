@@ -76,7 +76,7 @@
                     class="btn-success"
                     invisible="not usar_fact_digi or move_type not in ('out_invoice', 'out_refund', 'out_receipt') or state!='draft'"/>
 
-                  <button name="print_digital" string="Imprimir Fact/NC/ND" class="btn-success" type="object" invisible="state1='draft' or usar_fact_digi!=True"/>
+                  <button name="print_digital" string="Imprimir Fact/NC/ND" class="btn-success" type="object" invisible="state!='draft' or usar_fact_digi!=True"/>
                          
                          <!--button name="button_draft" string="borrador 2" type="object" /-->
                 </xpath>
