@@ -59,6 +59,10 @@
                   </page>
                 </xpath-->
 
+                <xpath expr="/form//button[@name='formato_libre']" position="attributes">
+                  <attribute name="invisible">move_type in ('in_invoice', 'in_refund','in_receipt') or state =='draft' or usar_fact_digi==True</attribute>
+                </xpath>
+
                 <xpath expr="/form/header/button[@name='action_post'][2]" position="attributes">
                     <attribute name="invisible">hide_post_button or move_type == 'entry' or display_inactive_currency_warning or (usar_fact_digi and move_type in ('out_invoice', 'out_refund', 'out_receipt'))</attribute>
                 </xpath>
