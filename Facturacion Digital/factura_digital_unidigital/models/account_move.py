@@ -15,7 +15,7 @@ class AccountMove(models.Model):
 
     result = fields.Char(copy=False)
     hasErrors = fields.Char(copy=False)
-    errorMessage = fields.Char(copy=False)
+    errorMessage = fields.Text(copy=False)
     information = fields.Char(copy=False)
     json_enviado = fields.Text(string="JSON Enviado", copy=False)
     proximo_doc = fields.Char(compute='_compute_proximo_valor')
