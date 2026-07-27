@@ -13,11 +13,11 @@ _logger = logging.getLogger(__name__)
 class AccountMove(models.Model):
     _inherit = "account.move"
 
-    result = fields.Char()
-    hasErrors = fields.Char()
-    errorMessage = fields.Char()
-    information = fields.Char()
-    json_enviado = fields.Text(string="JSON Enviado")
+    result = fields.Char(copy=False)
+    hasErrors = fields.Char(copy=False)
+    errorMessage = fields.Char(copy=False)
+    information = fields.Char(copy=False)
+    json_enviado = fields.Text(string="JSON Enviado", copy=False)
     proximo_doc = fields.Char(compute='_compute_proximo_valor')
 
     @api.onchange('journal_id')
