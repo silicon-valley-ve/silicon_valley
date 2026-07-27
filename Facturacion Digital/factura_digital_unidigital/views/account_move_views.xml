@@ -60,7 +60,7 @@
                          <button name="enviar_fact_digital" string="simular envio" type="object" />
 
                          <button name="confirmar2" string="Confirmar 2" type="object" 
-                            class="oe_highlight"
+                            class="btn-success"
                             invisible="move_type in ('in_invoice', 'in_refund', 'in_receipt', 'entry')"
                           />
                          
