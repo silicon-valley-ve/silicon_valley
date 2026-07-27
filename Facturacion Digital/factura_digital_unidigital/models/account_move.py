@@ -34,8 +34,9 @@ class AccountMove(models.Model):
         Abre en una nueva pestaña la URL de consulta de la factura digital 
         almacenada en el campo urlConsulta.
         """
+        xx='c3bb97a2-d502-4d62-ba5f-6e586dd6acc0'
         if self.company_id.usar_fact_digi==True:
-            url=self.company_id.url+self.company_id.endpoint_pdf_doc+"/"+self.result
+            url=self.company_id.url+self.company_id.endpoint_pdf_doc+"/"+xx #self.result
             if url:
                 self.ensure_one()
 
