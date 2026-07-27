@@ -36,7 +36,7 @@ class AccountMove(models.Model):
         """
         if self.company_id.usar_fact_digi==True:
             url=self.company_id.url+self.company_id.endpoint_pdf_doc+"/"+self.result
-            if self.url:
+            if url:
                 self.ensure_one()
 
                 #url = self.urlConsulta
