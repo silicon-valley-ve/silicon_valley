@@ -725,7 +725,7 @@ class  AccountMoveLine(models.Model):
                         continue 
                     
                     # Usamos la primera coincidencia
-                    original_line = original_line[1]
+                    original_line = original_line[0]
                     
                     # 3. Validar Cantidad
                     original_qty = original_line.quantity
