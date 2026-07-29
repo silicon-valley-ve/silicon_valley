@@ -15,6 +15,7 @@ manera que queden disponibles en todos los campos de dirección en modelos deriv
      """,
 	'images': ['static/description/icon.png'],
     "depends": ['base', 'base_contable'],
+    'license': 'LGPL-3',
     "data": [
         'security/ir.model.access.csv',
         'data/res.country.state.xml',
@@ -24,5 +25,7 @@ manera que queden disponibles en todos los campos de dirección en modelos deriv
         'views/l10n_ve_dpt_view.xml',
         'views/res_partner.xml',
     ],
-    "installable": True
+    'installable': True,
+    'application': False, # Cámbialo a True solo si quieres que aparezca como "App" principal en los filtros
+    'auto_install': False,
 }
