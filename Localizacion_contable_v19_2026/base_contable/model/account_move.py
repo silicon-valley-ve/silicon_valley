@@ -742,8 +742,8 @@ class  AccountMoveLine(models.Model):
                             #"a la cantidad de la factura afectada (%s) (Factura: %s)." % (credit_note_qty, line.name, original_qty, original_invoice.name))
                     
                     # 4. Validar Precio Unitario
-                    original_price = original_line.price_unit
-                    credit_note_price = line.price_unit
+                    credit_note_price = line.price_subtotal / line.quantity if line.quantity else line.price_unit
+                    original_price = original_line.price_subtotal / original_line.quantity if original_line.quantity else original_line.price_unit
 
                     if credit_note_price > original_price:
                         raise UserError(_(
