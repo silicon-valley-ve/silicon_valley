@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="vista_from_iva_retention_prove_fact_dig" model="ir.ui.view">
+        <field name="name">vista.from.iva.retention.prove.fact.dig</field>
+        <field name="model">vat.retention</field>
+        <field name="inherit_id" ref="iva_retention.vista_from_iva_retention_clien"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='voucher_delivery_date']" position="after">
+                <field name="result" readonly="state!='draft'"/>
+                        <field name="hasErrors" string="Hubo Error?" readonly="state!='draft'"/>
+                        <field name="errorMessage" string="Mensaje de error" readonly="state!='draft'"/>
+                        <field name="information" string="Informacion:" readonly="state!='draft'"/>
+                        <field name="code" readonly="state!='draft'" class="fw-bold" decoration-success="code == '200'" decoration-danger="code and code != '200'"/>
+                        <field name="json_enviado" readonly="state!='draft'"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

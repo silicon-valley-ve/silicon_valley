@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="vista_from_islr_retention_fact_dig" model="ir.ui.view">
+        <field name="name">vista.from.islr.retention.fact.dig</field>
+        <field name="model">isrl.retention</field>
+        <field name="inherit_id" ref="isrl_retention.isrl_retention_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='type']" position="after">
+                <field name="nro_ctrol_novus" string="Nro Control Novus" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
