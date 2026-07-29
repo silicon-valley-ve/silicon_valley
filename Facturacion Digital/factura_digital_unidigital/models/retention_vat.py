@@ -124,10 +124,7 @@ class RetentionVat(models.Model):
             company = rec.company_id
             url = getattr(company, 'unidigital_retention_url', False) or 'https://qa.unidigital.global/digitalinvoice-core/documents/createretention'
 
-            if not url:
-                raise UserError(_("No se ha configurado la URL de retenciones para Unidigital."))
-
-            # --- GENERACIÓN DE TOKEN NUEVO EN CADA ENVÍO ---
+            # Mantenemos tu extracción original del token
             token = False
             if hasattr(company, 'unidigital_get_token'):
                 token = company.unidigital_get_token()
@@ -136,19 +133,17 @@ class RetentionVat(models.Model):
             else:
                 token = getattr(company, 'unidigital_token', False)
 
-            if not token:
-                raise UserError(_("No se pudo obtener un token de autenticación válido desde res.company."))
-
-            # 1. Generar JSON y guardarlo en el campo
+            # 1. Generar JSON y guardar en el campo
             payload_data = rec._prepare_unidigital_retention_json()
             json_payload = json.dumps(payload_data, indent=4, ensure_ascii=False)
             rec.json_enviado = json_payload
 
             headers = {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': f"Bearer {token}"
+                'Accept': 'application/json'
             }
+            if token:
+                headers['Authorization'] = f"Bearer {token}"
 
             _logger.info("Enviando Retención IVA Unidigital (ID %s): %s", rec.id, json_payload)
 
@@ -156,52 +151,33 @@ class RetentionVat(models.Model):
                 response = requests.post(url, data=json_payload.encode('utf-8'), headers=headers, timeout=30)
                 http_status = response.status_code
                 
-                # Intentar parsear el JSON retornado
                 try:
                     res_json = response.json() if response.content else {}
                 except Exception:
-                    res_json = {}
+                    res_json = {"raw_response": response.text}
 
-                _logger.info("Respuesta Unidigital (ID %s) [HTTP %s]: %s", rec.id, http_status, response.text)
+                _logger.info("Respuesta Unidigital (ID %s): %s", rec.id, res_json)
 
-                # 2. Registrar el código y estado de la respuesta
-                rec.code = str(http_status)
-                has_errors = http_status not in (200, 201) or res_json.get("hasErrors", False)
-                rec.hasErrors = str(has_errors)
-                
+                # 2. Guardar datos en los campos
+                rec.code = str(res_json.get("code") if res_json.get("code") is not None else http_status)
+                rec.hasErrors = str(res_json.get("hasErrors", http_status not in (200, 201)))
+                rec.result = json.dumps(res_json.get("result")) if res_json.get("result") is not None else str(res_json.get("result", ""))
+
+                # --- AQUÍ ESTÁ EL CAMBIO SENCILLO ---
+                # Si hay 'errors', los metemos directamente en 'information'
                 errors_data = res_json.get("errors", [])
-                info_data = res_json.get("information", [])
-                
-                # MANEJO DE ERRORES (Si hasErrors es True o trae bloque de errores)
-                if has_errors or errors_data:
-                    # A) Mapeo detallado de errorMessage en texto legible
-                    if isinstance(errors_data, list) and len(errors_data) > 0:
-                        error_lines = []
-                        for err in errors_data:
-                            if isinstance(err, dict):
-                                msg = err.get('message') or err.get('errorMessage') or str(err)
-                                error_lines.append(f"- {msg}")
-                            else:
-                                error_lines.append(f"- {str(err)}")
-                        rec.errorMessage = "\n".join(error_lines)
-                        
-                        # B) GUARDAR EL DETALLE DE ERRORES EN EL CAMPO 'information'
-                        rec.information = json.dumps(errors_data, indent=2, ensure_ascii=False)
-                    else:
-                        # Fallback si 'errors' viene vacío pero hay fallo HTTP o genérico
-                        raw_err = res_json.get("message") or response.text or f"Error HTTP {http_status}"
-                        rec.errorMessage = str(raw_err)
-                        rec.information = str(raw_err)
-
-                    rec.result = json.dumps(res_json.get("result")) if res_json.get("result") is not None else response.text
-
-                # RESPUESTA EXITOSA (HTTP 200/201)
-                else:
+                if errors_data:
+                    rec.information = json.dumps(errors_data, indent=2, ensure_ascii=False)
+                    rec.errorMessage = str(errors_data)
+                elif res_json.get("information"):
+                    rec.information = json.dumps(res_json.get("information"), indent=2, ensure_ascii=False)
                     rec.errorMessage = ""
-                    rec.information = json.dumps(info_data, indent=2, ensure_ascii=False) if info_data else "Exitoso"
-                    rec.result = json.dumps(res_json.get("result")) if res_json.get("result") is not None else str(res_json)
+                else:
+                    # Si information viene [], guardamos lo que respondió el servidor (por ejemplo el texto del 401 o la respuesta completa)
+                    rec.information = json.dumps(res_json, indent=2, ensure_ascii=False)
+                    rec.errorMessage = res_json.get("message") or response.text
 
-                # 3. Notificación emergente en Odoo
+                # 3. Notificación simple
                 if http_status in (200, 201) and not res_json.get("hasErrors"):
                     if hasattr(rec, 'state') and rec.state == 'draft' and hasattr(rec, 'action_posted'):
                         rec.action_posted()
@@ -211,7 +187,7 @@ class RetentionVat(models.Model):
                         'tag': 'display_notification',
                         'params': {
                             'title': _('Comprobante Enviado'),
-                            'message': _('La retención de IVA fue procesada exitosamente en Unidigital.'),
+                            'message': _('La retención de IVA fue procesada exitosamente.'),
                             'type': 'success',
                             'sticky': False,
                         }
@@ -221,8 +197,8 @@ class RetentionVat(models.Model):
                         'type': 'ir.actions.client',
                         'tag': 'display_notification',
                         'params': {
-                            'title': _('Error devuelto por la API Unidigital (Status %s)') % http_status,
-                            'message': rec.errorMessage or _("Error procesando la retención."),
+                            'title': _('Respuesta API (Status %s)') % http_status,
+                            'message': rec.errorMessage or rec.information or _("Error procesando la retención."),
                             'type': 'danger',
                             'sticky': True,
                         }
@@ -231,9 +207,8 @@ class RetentionVat(models.Model):
             except requests.exceptions.RequestException as e:
                 rec.hasErrors = "True"
                 rec.code = "500"
-                rec.errorMessage = f"Error de conexión con la API: {str(e)}"
-                rec.information = f"Excepción de Red: {str(e)}"
-                _logger.error("Unidigital Excepción de Red: %s", str(e))
+                rec.errorMessage = f"Error de conexión: {str(e)}"
+                rec.information = str(e)
                 
                 return {
                     'type': 'ir.actions.client',
