@@ -27,4 +27,7 @@ class RetentionVat(models.Model):
         pass
         #res = super().action_posted()
 
+    def envia_comp_ret_iva(self):
+        pass
+
     
