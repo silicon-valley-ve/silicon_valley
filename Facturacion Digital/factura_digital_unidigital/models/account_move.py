@@ -77,15 +77,7 @@ class AccountMove(models.Model):
         for rec in self:
             rec.proximo_ctrl = rec.journal_id.ctrl_sequence_number_next
 
-    def valida_pagos_progra_contado(self):
-        # ELIMINAMOS la restricción que evitaba las Notas de Crédito (refund)
-        if self.cond_fact == 'cont': 
-            payments_to_process = self.igtf_ids.search([('move_id', '=', self.id)])
-            if not payments_to_process:
-                # Opcional: Para Notas de Crédito podrías querer que esto no sea obligatorio
-                if self.move_type not in ('out_refund', 'in_refund'):
-                    raise UserError(_('Debe registrar primero los métodos de pagos para esta factura a contado'))
-            
+    
 
     def confirmar2(self):
         for rec in self:
@@ -350,7 +342,7 @@ class AccountMove(models.Model):
             }
 
             if document_type in ('NC', 'ND'):
-                origin_doc_number = move.reversed_entry_id.proximo_doc or move.ref or "0"
+                origin_doc_number = move.fact_afect  #move.reversed_entry_id.proximo_doc or move.ref or "0"
                 origin_number_clean = ''.join(filter(str.isdigit, str(origin_doc_number)))
                 payload["AffectedDocumentNumber"] = int(origin_number_clean) if origin_number_clean else 0
 
