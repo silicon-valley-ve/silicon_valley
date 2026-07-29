@@ -1,4 +1,29 @@
-def _prepare_unidigital_retention_json(self):
+# -*- coding: utf-8 -*-
+
+import logging
+import requests
+import json
+from datetime import datetime
+from odoo import api, fields, models, _
+from odoo.exceptions import UserError, ValidationError
+
+_logger = logging.getLogger(__name__)
+
+
+class RetentionVat(models.Model):
+    """Integración con API Unidigital para Comprobantes de Retención de IVA SENIAT."""
+    _inherit = 'vat.retention'
+
+    result = fields.Char(copy=False)
+    hasErrors = fields.Char(copy=False)
+    errorMessage = fields.Text(copy=False)
+    information = fields.Char(copy=False)
+    json_enviado = fields.Text(string="JSON Enviado", copy=False)
+    proximo_doc = fields.Char(compute='_compute_proximo_valor')
+    proximo_ctrl = fields.Char(compute='_compute_proximo_ctrl')
+    code = fields.Char(copy=False, string="Código de respuesta servidor API")
+
+    def _prepare_unidigital_retention_json(self):
         """Construye el Payload exacto exigido por la API /createretention."""
         self.ensure_one()
 
