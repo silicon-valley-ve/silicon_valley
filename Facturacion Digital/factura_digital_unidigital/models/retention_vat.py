@@ -22,7 +22,7 @@ class RetentionVat(models.Model):
     code = fields.Char(copy=False, string="Código de respuesta servidor API")
 
     def _prepare_unidigital_retention_json(self):
-        """Construye el Payload exacto envuelto en 'dto' esperado por la API /createretention."""
+        """Construye el Payload plano esperado por la API /createretention de Unidigital."""
         self.ensure_one()
 
         partner = self.partner_id
@@ -101,26 +101,24 @@ class RetentionVat(models.Model):
         voucher_num_digits = ''.join(filter(str.isdigit, str(self.name or '')))
         numeric_voucher_number = int(voucher_num_digits[-8:]) if voucher_num_digits else self.id
 
-        # Wrapper 'dto' requerido por Unidigital
+        # Payload PLANO (Sin wrapper 'dto')
         return {
-            "dto": {
-                "DocumentType": "RI",
-                "Number": numeric_voucher_number,
-                "EmissionDateAndTime": emission_dt,
-                "Name": partner.name or "",
-                "FiscalRegistryCode": code_rif,
-                "FiscalRegistry": number_rif,
-                "Address": partner.street or "Caracas, Venezuela",
-                "Phone": partner.phone or partner.mobile or "02120000000",
-                "EmailTo": partner.email or "comprobantes@dominio.com",
-                "PerceiverType": "PJ-DOMICILIADA",
-                "TaxBase": round(total_tax_base, 2),
-                "TaxAmount": round(total_tax_amount, 2),
-                "TotalIGTF": 0,
-                "AmountRetained": round(total_retained, 2),
-                "SystemReference": self.name or f"RI-{self.id}",
-                "Documents": documents_payload
-            }
+            "DocumentType": "RI",
+            "Number": numeric_voucher_number,
+            "EmissionDateAndTime": emission_dt,
+            "Name": partner.name or "",
+            "FiscalRegistryCode": code_rif,
+            "FiscalRegistry": number_rif,
+            "Address": partner.street or "Caracas, Venezuela",
+            "Phone": partner.phone or partner.mobile or "02120000000",
+            "EmailTo": partner.email or "comprobantes@dominio.com",
+            "PerceiverType": "PJ-DOMICILIADA",
+            "TaxBase": round(total_tax_base, 2),
+            "TaxAmount": round(total_tax_amount, 2),
+            "TotalIGTF": 0,
+            "AmountRetained": round(total_retained, 2),
+            "SystemReference": self.name or f"RI-{self.id}",
+            "Documents": documents_payload
         }
 
     def envia_comp_ret_iva(self):
