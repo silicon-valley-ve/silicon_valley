@@ -687,7 +687,7 @@ class  AccountMoveLine(models.Model):
         no superen los valores de la factura referenciada en el campo 'fact_afect' (número de factura).
         """
         
-        raise UserError(_("nro=%s")%self)
+        #raise UserError(_("nro=%s")%self)
         for line in self:
             move = line.move_id
             
