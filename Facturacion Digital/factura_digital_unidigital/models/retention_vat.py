@@ -19,8 +19,6 @@ class RetentionVat(models.Model):
     errorMessage = fields.Text(copy=False)
     information = fields.Char(copy=False)
     json_enviado = fields.Text(string="JSON Enviado", copy=False)
-    #proximo_doc = fields.Char(compute='_compute_proximo_valor')
-    #proximo_ctrl = fields.Char(compute='_compute_proximo_ctrl')
     code = fields.Char(copy=False, string="Código de respuesta servidor API")
 
     def _prepare_unidigital_retention_json(self):
@@ -142,7 +140,7 @@ class RetentionVat(models.Model):
         payload_data = self._prepare_unidigital_retention_json()
         json_payload = json.dumps(payload_data, indent=2, ensure_ascii=False)
         
-        # 2. Guardar en BD antes de consultar a la API (persistir sin importar respuesta)
+        # Guardar payload antes de enviar
         self.write({'json_enviado': json_payload})
         self.env.cr.commit()
 
@@ -157,8 +155,7 @@ class RetentionVat(models.Model):
 
         try:
             response = requests.post(url, data=json_payload.encode('utf-8'), headers=headers, timeout=30)
-            self.write({'code': str(response.status_code)})
-
+            
             try:
                 res_json = response.json()
             except Exception:
@@ -167,40 +164,58 @@ class RetentionVat(models.Model):
             _logger.info("Respuesta Unidigital (ID %s): %s", self.id, res_json)
 
             val_result = str(res_json.get('result', ''))
-            val_has_errors = str(res_json.get('hasErrors', response.status_code not in (200, 201)))
+            has_errors = res_json.get('hasErrors', response.status_code not in (200, 201))
+            val_has_errors = str(has_errors)
             val_info = json.dumps(res_json.get('information', []))
 
+            # Extraer los mensajes de error de forma exhaustiva
+            error_msg_list = []
+            errors_data = res_json.get('errors', [])
+            
+            if isinstance(errors_data, list) and errors_data:
+                for err in errors_data:
+                    if isinstance(err, dict):
+                        # Caso 1: {'message': 'The Name field is required.'}
+                        if 'message' in err:
+                            error_msg_list.append(err['message'])
+                        elif 'errorMessage' in err:
+                            error_msg_list.append(err['errorMessage'])
+                        
+                        # Caso 2: {'errors': [{'errorMessage': '...'}]}
+                        if 'errors' in err and isinstance(err['errors'], list):
+                            for sub in err['errors']:
+                                if isinstance(sub, dict):
+                                    error_msg_list.append(sub.get('errorMessage', sub.get('message', str(sub))))
+                                else:
+                                    error_msg_list.append(str(sub))
+                    else:
+                        error_msg_list.append(str(err))
+            elif isinstance(errors_data, str) and errors_data:
+                error_msg_list.append(errors_data)
+
+            if not error_msg_list:
+                gen_msg = res_json.get('message') or res_json.get('Message') or response.text
+                if gen_msg and (has_errors or response.status_code not in (200, 201)):
+                    error_msg_list.append(str(gen_msg))
+
+            formatted_error_msg = "\n".join([f"- {m}" for m in error_msg_list]) if error_msg_list else False
+
+            # PERSISTENCIA EN BD: Guardar todo lo devuelto
             self.write({
+                'code': str(response.status_code),
                 'result': val_result,
                 'hasErrors': val_has_errors,
                 'information': val_info,
+                'errorMessage': formatted_error_msg or False
             })
+            # Commit explícito para asegurar guardado antes de cualquier UserError
+            self.env.cr.commit()
 
-            # Verificar si hubo errores en la API
-            if res_json.get('hasErrors') or response.status_code not in (200, 201):
-                error_msg = ""
-                errors_list = res_json.get('errors', [])
-                
-                if isinstance(errors_list, list) and errors_list:
-                    for err in errors_list:
-                        if isinstance(err, dict):
-                            if 'errors' in err and isinstance(err['errors'], list):
-                                for sub_err in err['errors']:
-                                    error_msg += f"- [{sub_err.get('whatIsEval')}] {sub_err.get('errorMessage')}\n"
-                            else:
-                                error_msg += f"- {err.get('message', err.get('errorMessage', str(err)))}\n"
-                        else:
-                            error_msg += f"- {str(err)}\n"
-                else:
-                    error_msg = res_json.get('message') or res_json.get('Message') or response.text or "Error desconocido en API Unidigital"
-
-                self.write({'errorMessage': error_msg})
-                self.env.cr.commit()
-                
-                raise UserError(_("Error devuelto por la API Unidigital:\n%s") % error_msg)
+            # Lógica de salida / excepción
+            if has_errors or response.status_code not in (200, 201) or formatted_error_msg:
+                raise UserError(_("Error devuelto por la API Unidigital:\n%s") % (formatted_error_msg or "Error desconocido en API Unidigital"))
 
             else:
-                self.write({'errorMessage': False})
                 if self.state == 'draft':
                     self.action_posted()
 
@@ -217,7 +232,10 @@ class RetentionVat(models.Model):
 
         except requests.exceptions.RequestException as e:
             err_str = str(e)
-            self.write({'errorMessage': err_str})
+            self.write({
+                'errorMessage': err_str,
+                'hasErrors': 'true'
+            })
             self.env.cr.commit()
             _logger.error("Error de conexión con API Unidigital: %s", err_str)
             raise UserError(_("No se pudo conectar con el servidor de Unidigital: %s") % err_str)
