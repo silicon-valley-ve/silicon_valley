@@ -13,6 +13,11 @@
                         <field name="code" readonly="state!='draft'" class="fw-bold" decoration-success="code == '200'" decoration-danger="code and code != '200'"/>
                         <field name="json_enviado" readonly="state!='draft'"/>
             </xpath>
+
+            <xpath expr="/form//button[@name='comprobante']" position="after">
+                <button name="envia_comp_ret_iva" string="simular" type="object"/>
+            </xpath>
+
         </field>
     </record>
 </odoo>
