@@ -11,6 +11,7 @@
                         <field name="errorMessage" string="Mensaje de error" readonly="state!='draft'"/>
                         <field name="information" string="Informacion:" readonly="state!='draft'"/>
                         <field name="code" readonly="state!='draft'" class="fw-bold" decoration-success="code == '200'" decoration-danger="code and code != '200'"/>
+                        <field name="message" string="Mensaje de error" readonly="state!='draft'"/>
                         <field name="json_enviado" readonly="state!='draft'"/>
             </xpath>
 

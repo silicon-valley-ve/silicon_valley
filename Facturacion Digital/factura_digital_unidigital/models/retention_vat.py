@@ -20,6 +20,8 @@ class RetentionVat(models.Model):
     information = fields.Char(copy=False)
     json_enviado = fields.Text(string="JSON Enviado", copy=False)
     code = fields.Char(copy=False, string="Código de respuesta servidor API")
+    message = fields.Text(copy=False)
+
 
     def _prepare_unidigital_retention_json(self):
         """Construye el Payload plano compatible con la API /createretention de Unidigital."""
