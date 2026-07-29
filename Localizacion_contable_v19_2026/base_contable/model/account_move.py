@@ -729,7 +729,7 @@ class  AccountMoveLine(models.Model):
                     # 3. Validar Cantidad
                     original_qty = original_line.quantity
                     credit_note_qty = line.quantity
-                    raise UserError(_("original_qty %s, credit_note_qty %s")%(original_line.price_unit_ref,line.price_unit_ref))
+                    #raise UserError(_("original_qty %s, credit_note_qty %s")%(original_line.price_unit_ref,line.price_unit_ref))
                     
                     if credit_note_qty > original_qty:
                         raise ValidationError(_(
