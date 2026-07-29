@@ -22,7 +22,7 @@ class RetentionVat(models.Model):
     code = fields.Char(copy=False, string="Código de respuesta servidor API")
 
     def _prepare_unidigital_retention_json(self):
-        """Construye el Payload exacto esperado por la API /createretention."""
+        """Construye el Payload exacto envuelto en 'dto' esperado por la API /createretention."""
         self.ensure_one()
 
         partner = self.partner_id
@@ -34,7 +34,7 @@ class RetentionVat(models.Model):
         code_rif = raw_vat[0] if raw_vat[0].isalpha() else 'J'
         number_rif = raw_vat[1:] if raw_vat[0].isalpha() else raw_vat
 
-        # 2. Formatear la fecha de emisión
+        # 2. Formatear la fecha de emisión (ISO 8601 UTC)
         target_date = self.voucher_delivery_date or self.accouting_date or fields.Date.today()
         emission_dt = datetime.combine(target_date, datetime.min.time()).strftime('%Y-%m-%dT%H:%M:%SZ')
 
@@ -67,7 +67,7 @@ class RetentionVat(models.Model):
             ret_rate = line.retention_rate or 75.00
             retained_amt = line.retention_amount
 
-            # Cálculo de alícuota de IVA (generalmente 16%)
+            # Alícuota real del IVA (ej. 16.0%)
             tax_percent = round((vat_amount / tax_base * 100), 2) if tax_base > 0 else 16.00
 
             total_tax_base += tax_base
@@ -97,28 +97,30 @@ class RetentionVat(models.Model):
                 "ISLR": []
             })
 
-        # Evitar desbordamiento de Int32 en 'Number'
+        # Extraer dígitos para evitar desbordamiento Int32
         voucher_num_digits = ''.join(filter(str.isdigit, str(self.name or '')))
         numeric_voucher_number = int(voucher_num_digits[-8:]) if voucher_num_digits else self.id
 
-        # Estructura plana (requerida directamente por Unidigital sin contenedor dto)
+        # Wrapper 'dto' requerido por Unidigital
         return {
-            "DocumentType": "RI",
-            "Number": numeric_voucher_number,
-            "EmissionDateAndTime": emission_dt,
-            "Name": partner.name or "",
-            "FiscalRegistryCode": code_rif,
-            "FiscalRegistry": number_rif,
-            "Address": partner.street or "Caracas, Venezuela",
-            "Phone": partner.phone or partner.mobile or "02120000000",
-            "EmailTo": partner.email or "comprobantes@dominio.com",
-            "PerceiverType": "PJ-DOMICILIADA",
-            "TaxBase": round(total_tax_base, 2),
-            "TaxAmount": round(total_tax_amount, 2),
-            "TotalIGTF": 0,
-            "AmountRetained": round(total_retained, 2),
-            "SystemReference": self.name or f"RI-{self.id}",
-            "Documents": documents_payload
+            "dto": {
+                "DocumentType": "RI",
+                "Number": numeric_voucher_number,
+                "EmissionDateAndTime": emission_dt,
+                "Name": partner.name or "",
+                "FiscalRegistryCode": code_rif,
+                "FiscalRegistry": number_rif,
+                "Address": partner.street or "Caracas, Venezuela",
+                "Phone": partner.phone or partner.mobile or "02120000000",
+                "EmailTo": partner.email or "comprobantes@dominio.com",
+                "PerceiverType": "PJ-DOMICILIADA",
+                "TaxBase": round(total_tax_base, 2),
+                "TaxAmount": round(total_tax_amount, 2),
+                "TotalIGTF": 0,
+                "AmountRetained": round(total_retained, 2),
+                "SystemReference": self.name or f"RI-{self.id}",
+                "Documents": documents_payload
+            }
         }
 
     def envia_comp_ret_iva(self):
@@ -126,12 +128,20 @@ class RetentionVat(models.Model):
         for rec in self:
             company = rec.company_id
             url = getattr(company, 'unidigital_retention_url', False) or 'https://qa.unidigital.global/digitalinvoice-core/documents/createretention'
-            token = getattr(company, 'unidigital_token', False)
+
+            # --- OBTENCIÓN DEL TOKEN DESDE RES.COMPANY ---
+            token = False
+            if hasattr(company, 'unidigital_get_token'):
+                token = company.unidigital_get_token()
+            elif hasattr(company, 'get_unidigital_token'):
+                token = company.get_unidigital_token()
+            else:
+                token = getattr(company, 'unidigital_token', False)
 
             if not url:
                 raise UserError(_("No se ha configurado la URL de retenciones para Unidigital."))
 
-            # 1. Generar JSON y almacenarlo
+            # 1. Generar JSON y guardarlo en el campo
             payload_data = rec._prepare_unidigital_retention_json()
             json_payload = json.dumps(payload_data, indent=4, ensure_ascii=False)
             rec.json_enviado = json_payload
@@ -156,13 +166,13 @@ class RetentionVat(models.Model):
 
                 _logger.info("Respuesta Unidigital (ID %s): %s", rec.id, res_json)
 
-                # 2. Guardar respuesta de la API
+                # 2. Registrar la respuesta en los campos del modelo
                 rec.code = str(res_json.get("code") if res_json.get("code") is not None else http_status)
                 rec.hasErrors = str(res_json.get("hasErrors", http_status not in (200, 201)))
                 rec.result = json.dumps(res_json.get("result")) if res_json.get("result") is not None else str(res_json.get("result", ""))
                 rec.information = json.dumps(res_json.get("information", []))
 
-                # Extraer errores si existen
+                # Mapear mensajes de error
                 errors_data = res_json.get("errors", [])
                 if errors_data:
                     if isinstance(errors_data, list):
@@ -177,11 +187,11 @@ class RetentionVat(models.Model):
                     else:
                         rec.errorMessage = str(errors_data)
                 elif http_status not in (200, 201) or res_json.get("hasErrors"):
-                    rec.errorMessage = res_json.get("message") or response.text or "Error en la petición API"
+                    rec.errorMessage = res_json.get("message") or response.text or f"Error HTTP {http_status} en la petición API"
                 else:
                     rec.errorMessage = ""
 
-                # 3. Respuesta a la UI de Odoo
+                # 3. Notificación a la interfaz de Odoo
                 if http_status in (200, 201) and not res_json.get("hasErrors"):
                     if hasattr(rec, 'state') and rec.state == 'draft' and hasattr(rec, 'action_posted'):
                         rec.action_posted()
