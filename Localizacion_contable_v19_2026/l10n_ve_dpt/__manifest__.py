@@ -22,8 +22,8 @@
 
 {
     "name": "Localización Venezolana: Municipios y Parroquias",
-    "version": "18.0",
-    "author": "Grupo Angendar",
+    "version": "19.0",
+    "author": "Ing. Darrell Sojo",
     "category": "Localization",
     "description":
         """
