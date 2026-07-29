@@ -686,7 +686,7 @@ class  AccountMoveLine(models.Model):
         Valida que la cantidad y el precio unitario de la línea de la Nota de Crédito
         no superen los valores de la factura referenciada en el campo 'fact_afect' (número de factura).
         """
-        lista=self.search([('')])
+        
         raise UserError(_("nro=%s")%self)
         for line in self:
             move = line.move_id
