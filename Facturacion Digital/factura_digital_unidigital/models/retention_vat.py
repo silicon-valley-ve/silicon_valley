@@ -122,6 +122,10 @@ class RetentionVat(models.Model):
         return payload
 
     def envia_comp_ret_iva(self):
+        self.json_enviado=self._prepare_unidigital_retention_json()
+
+
+    def envia_comp_ret_iva_org(self):
         """Envía el JSON de Retención de IVA a la API Unidigital garantizando el guardado del JSON."""
         self.ensure_one()
 
