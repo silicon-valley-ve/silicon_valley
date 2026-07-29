@@ -126,7 +126,6 @@ class RetentionVat(models.Model):
             company = rec.company_id
             url = getattr(company, 'unidigital_retention_url', False) or 'https://qa.unidigital.global/digitalinvoice-core/documents/createretention'
 
-            # Mantenemos tu extracción original del token
             token = False
             if hasattr(company, 'unidigital_get_token'):
                 token = company.unidigital_get_token()
@@ -160,13 +159,17 @@ class RetentionVat(models.Model):
 
                 _logger.info("Respuesta Unidigital (ID %s): %s", rec.id, res_json)
 
-                # 2. Guardar datos en los campos
+                # 2. Guardar datos en los campos básicos
                 rec.code = str(res_json.get("code") if res_json.get("code") is not None else http_status)
                 rec.hasErrors = str(res_json.get("hasErrors", http_status not in (200, 201)))
                 rec.result = json.dumps(res_json.get("result")) if res_json.get("result") is not None else str(res_json.get("result", ""))
 
-                # --- AQUÍ ESTÁ EL CAMBIO SENCILLO ---
-                # Si hay 'errors', los metemos directamente en 'information'
+                # --- ASIGNACIÓN DIRECTA DEL CAMPO MESSAGE ---
+                # Extrae la cadena de texto de "message" que devuelve Unidigital
+                api_message = res_json.get("message") or ""
+                rec.message = str(api_message)
+
+                # Mapeo de errors e information
                 errors_data = res_json.get("errors", [])
                 if errors_data:
                     rec.information = json.dumps(errors_data, indent=2, ensure_ascii=False)
@@ -175,11 +178,10 @@ class RetentionVat(models.Model):
                     rec.information = json.dumps(res_json.get("information"), indent=2, ensure_ascii=False)
                     rec.errorMessage = ""
                 else:
-                    # Si information viene [], guardamos lo que respondió el servidor (por ejemplo el texto del 401 o la respuesta completa)
                     rec.information = json.dumps(res_json, indent=2, ensure_ascii=False)
-                    rec.errorMessage = res_json.get("message") or response.text
+                    rec.errorMessage = api_message or response.text
 
-                # 3. Notificación simple
+                # 3. Notificación a la interfaz de Odoo
                 if http_status in (200, 201) and not res_json.get("hasErrors"):
                     if hasattr(rec, 'state') and rec.state == 'draft' and hasattr(rec, 'action_posted'):
                         rec.action_posted()
@@ -200,7 +202,7 @@ class RetentionVat(models.Model):
                         'tag': 'display_notification',
                         'params': {
                             'title': _('Respuesta API (Status %s)') % http_status,
-                            'message': rec.errorMessage or rec.information or _("Error procesando la retención."),
+                            'message': rec.message or rec.errorMessage or _("Error procesando la retención."),
                             'type': 'danger',
                             'sticky': True,
                         }
@@ -210,6 +212,7 @@ class RetentionVat(models.Model):
                 rec.hasErrors = "True"
                 rec.code = "500"
                 rec.errorMessage = f"Error de conexión: {str(e)}"
+                rec.message = f"Error de conexión: {str(e)}"
                 rec.information = str(e)
                 
                 return {
