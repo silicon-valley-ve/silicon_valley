@@ -126,14 +126,25 @@ class RetentionVat(models.Model):
             company = rec.company_id
             url = getattr(company, 'unidigital_retention_url', False) or 'https://qa.unidigital.global/digitalinvoice-core/documents/createretention'
 
+            # 1. Búsqueda y extracción del Token en res.company
             token = False
-            if hasattr(company, 'unidigital_get_token'):
+            
+            # Intento por métodos conocidos
+            if hasattr(company, 'unidigital_get_token') and callable(getattr(company, 'unidigital_get_token')):
                 token = company.unidigital_get_token()
-            elif hasattr(company, 'get_unidigital_token'):
+            elif hasattr(company, 'get_unidigital_token') and callable(getattr(company, 'get_unidigital_token')):
                 token = company.get_unidigital_token()
-            else:
-                token = getattr(company, 'unidigital_token', False)
+            elif hasattr(company, 'get_token_unidigital') and callable(getattr(company, 'get_token_unidigital')):
+                token = company.get_token_unidigital()
+            
+            # Intento por campos conocidos si no vino de método
+            if not token:
+                token = getattr(company, 'unidigital_token', False) or getattr(company, 'token_unidigital', False) or getattr(company, 'unidigital_api_token', False)
 
+            _logger.info("=== DEBUG TOKEN UNIDIGITAL ===")
+            _logger.info("Company ID: %s | Token obtenido: %s", company.id, token if token else "NINGUNO (False)")
+
+            # 2. Generación del Payload
             payload_data = rec._prepare_unidigital_retention_json()
             json_payload = json.dumps(payload_data, indent=4, ensure_ascii=False)
             rec.json_enviado = json_payload
@@ -144,6 +155,8 @@ class RetentionVat(models.Model):
             }
             if token:
                 headers['Authorization'] = f"Bearer {token}"
+            else:
+                _logger.warning("ATENCIÓN: Se enviará la petición SIN cabecera Authorization porque token es False.")
 
             _logger.info("Enviando Retención IVA Unidigital (ID %s): %s", rec.id, json_payload)
 
@@ -151,28 +164,26 @@ class RetentionVat(models.Model):
                 response = requests.post(url, data=json_payload.encode('utf-8'), headers=headers, timeout=30)
                 http_status = response.status_code
                 
-                # Tratar de parsear JSON, si falla guardamos el texto crudo
                 try:
                     res_json = response.json() if response.content else {}
                 except Exception:
                     res_json = {}
 
-                _logger.info("Respuesta Unidigital (ID %s): %s", rec.id, response.text)
+                _logger.info("Respuesta Unidigital (ID %s - Status %s): %s", rec.id, http_status, response.text)
 
-                # 1. Código HTTP y Bandera de Error
+                # 3. Guardar en los campos del modelo
                 rec.code = str(res_json.get("code") if res_json.get("code") is not None else http_status)
                 rec.hasErrors = str(res_json.get("hasErrors", http_status not in (200, 201)))
                 rec.result = json.dumps(res_json.get("result")) if res_json.get("result") is not None else str(res_json.get("result", ""))
 
-                # 2. ASIGNACIÓN DIRECTA DEL CAMPO MESSAGE (Mensaje del api)
-                # Prioriza el 'message' de la API. Si no existe (como en el 401), guarda la respuesta cruda en texto o la razón HTTP.
+                # Captura el mensaje retornado
                 api_msg = res_json.get("message")
                 if not api_msg:
                     api_msg = response.text if response.text else f"Respuesta HTTP {http_status}: {response.reason}"
                 
                 rec.message = str(api_msg)
 
-                # 3. Asignación de errorMessage e information
+                # Detalle de errores / información
                 errors_data = res_json.get("errors", [])
                 if errors_data:
                     rec.information = json.dumps(errors_data, indent=2, ensure_ascii=False)
@@ -184,7 +195,7 @@ class RetentionVat(models.Model):
                     rec.information = json.dumps(res_json, indent=2, ensure_ascii=False)
                     rec.errorMessage = rec.message
 
-                # 4. Notificaciones Odoo
+                # 4. Respuesta UI
                 if http_status in (200, 201) and not res_json.get("hasErrors"):
                     if hasattr(rec, 'state') and rec.state == 'draft' and hasattr(rec, 'action_posted'):
                         rec.action_posted()
