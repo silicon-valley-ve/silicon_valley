@@ -98,7 +98,6 @@ class RetentionVat(models.Model):
         # Evitar desbordamiento de Int32 (máx 2.147.483.647) en 'Number'
         voucher_num_digits = ''.join(filter(str.isdigit, str(self.name or '')))
         if voucher_num_digits:
-            # Tomar los últimos 8 dígitos para garantizar un entero válido dentro de Int32
             numeric_voucher_number = int(voucher_num_digits[-8:])
         else:
             numeric_voucher_number = self.id
@@ -107,7 +106,7 @@ class RetentionVat(models.Model):
             "DocumentType": "RI",
             "Number": numeric_voucher_number,
             "EmissionDateAndTime": emission_dt,
-            "Name": partner.name,
+            "Name": partner.name or "",
             "FiscalRegistryCode": code_rif,
             "FiscalRegistry": number_rif,
             "Address": partner.street or "Caracas, Venezuela",
@@ -122,120 +121,111 @@ class RetentionVat(models.Model):
             "Documents": documents_payload
         }
 
-        # La API requiere que todo vaya envuelto dentro de 'dto'
+        # Estructura requerida por Unidigital
         return {"dto": dto_payload}
 
     def envia_comp_ret_iva(self):
-        """Envía el JSON de Retención de IVA a la API Unidigital."""
-        self.ensure_one()
+        """Envía el JSON de Retención de IVA a la API Unidigital guardando respuesta al estilo AccountMove."""
+        for rec in self:
+            company = rec.company_id
+            url = getattr(company, 'unidigital_retention_url', False) or 'https://qa.unidigital.global/digitalinvoice-core/documents/createretention'
+            token = getattr(company, 'unidigital_token', False)
 
-        company = self.company_id
-        url = getattr(company, 'unidigital_retention_url', False) or 'https://qa.unidigital.global/digitalinvoice-core/documents/createretention'
-        token = getattr(company, 'unidigital_token', False)
+            if not url:
+                raise UserError(_("No se ha configurado la URL de retenciones para Unidigital."))
 
-        if not url:
-            raise UserError(_("No se ha configurado la URL de retenciones para Unidigital."))
+            # 1. Armar y guardar JSON de envío de forma persistente
+            payload_data = rec._prepare_unidigital_retention_json()
+            json_payload = json.dumps(payload_data, indent=4, ensure_ascii=False)
+            rec.json_enviado = json_payload
 
-        # 1. Armar JSON dentro del wrapper 'dto'
-        payload_data = self._prepare_unidigital_retention_json()
-        json_payload = json.dumps(payload_data, indent=2, ensure_ascii=False)
-        
-        # Guardar payload antes de enviar
-        self.write({'json_enviado': json_payload})
-        self.env.cr.commit()
+            headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+            if token:
+                headers['Authorization'] = f"Bearer {token}"
 
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        }
-        if token:
-            headers['Authorization'] = f"Bearer {token}"
+            _logger.info("Enviando Retención IVA Unidigital (ID %s): %s", rec.id, json_payload)
 
-        _logger.info("Enviando Retención IVA Unidigital (ID %s): %s", self.id, json_payload)
-
-        try:
-            response = requests.post(url, data=json_payload.encode('utf-8'), headers=headers, timeout=30)
-            
             try:
-                res_json = response.json()
-            except Exception:
-                res_json = {"raw_response": response.text}
+                response = requests.post(url, data=json_payload.encode('utf-8'), headers=headers, timeout=30)
+                http_status = response.status_code
+                
+                try:
+                    res_json = response.json() if response.content else {}
+                except Exception:
+                    res_json = {"raw_response": response.text}
 
-            _logger.info("Respuesta Unidigital (ID %s): %s", self.id, res_json)
+                _logger.info("Respuesta Unidigital (ID %s): %s", rec.id, res_json)
 
-            val_result = str(res_json.get('result', ''))
-            has_errors = res_json.get('hasErrors', response.status_code not in (200, 201))
-            val_has_errors = str(has_errors)
-            val_info = json.dumps(res_json.get('information', []))
+                # Guardado de variables de respuesta exactamente igual que en Facturas (account_move)
+                rec.code = str(res_json.get("code") if res_json.get("code") is not None else http_status)
+                rec.hasErrors = str(res_json.get("hasErrors", http_status not in (200, 201)))
+                rec.result = json.dumps(res_json.get("result")) if res_json.get("result") is not None else str(res_json.get("result", ""))
+                rec.information = json.dumps(res_json.get("information", []))
 
-            # Extraer los mensajes de error de forma exhaustiva
-            error_msg_list = []
-            errors_data = res_json.get('errors', [])
-            
-            if isinstance(errors_data, list) and errors_data:
-                for err in errors_data:
-                    if isinstance(err, dict):
-                        # Caso 1: {'message': 'The Name field is required.'}
-                        if 'message' in err:
-                            error_msg_list.append(err['message'])
-                        elif 'errorMessage' in err:
-                            error_msg_list.append(err['errorMessage'])
-                        
-                        # Caso 2: {'errors': [{'errorMessage': '...'}]}
-                        if 'errors' in err and isinstance(err['errors'], list):
-                            for sub in err['errors']:
-                                if isinstance(sub, dict):
-                                    error_msg_list.append(sub.get('errorMessage', sub.get('message', str(sub))))
-                                else:
-                                    error_msg_list.append(str(sub))
+                # Procesamiento y formateo de errores
+                errors_data = res_json.get("errors", [])
+                if errors_data:
+                    if isinstance(errors_data, list):
+                        error_lines = []
+                        for err in errors_data:
+                            if isinstance(err, dict):
+                                msg = err.get('message') or err.get('errorMessage') or str(err)
+                                error_lines.append(f"- {msg}")
+                            else:
+                                error_lines.append(f"- {str(err)}")
+                        rec.errorMessage = "\n".join(error_lines)
                     else:
-                        error_msg_list.append(str(err))
-            elif isinstance(errors_data, str) and errors_data:
-                error_msg_list.append(errors_data)
+                        rec.errorMessage = str(errors_data)
+                elif http_status not in (200, 201) or res_json.get("hasErrors"):
+                    rec.errorMessage = res_json.get("message") or response.text or "Error en la petición API"
+                else:
+                    rec.errorMessage = ""
 
-            if not error_msg_list:
-                gen_msg = res_json.get('message') or res_json.get('Message') or response.text
-                if gen_msg and (has_errors or response.status_code not in (200, 201)):
-                    error_msg_list.append(str(gen_msg))
+                # Evaluar resultado para respuesta en UI sin lanzar UserError que borre los datos
+                if http_status in (200, 201) and not res_json.get("hasErrors"):
+                    if rec.state == 'draft':
+                        rec.action_posted()
 
-            formatted_error_msg = "\n".join([f"- {m}" for m in error_msg_list]) if error_msg_list else False
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Comprobante Enviado'),
+                            'message': _('La retención de IVA fue procesada exitosamente.'),
+                            'type': 'success',
+                            'sticky': False,
+                        }
+                    }
+                else:
+                    # En lugar de raise UserError, enviamos una notificación de advertencia.
+                    # Esto permite que la ventana actualice los campos guardados en la BD.
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Error devuelto por la API Unidigital'),
+                            'message': rec.errorMessage or _("Error procesando el comprobante en Unidigital."),
+                            'type': 'danger',
+                            'sticky': True,
+                        }
+                    }
 
-            # PERSISTENCIA EN BD: Guardar todo lo devuelto
-            self.write({
-                'code': str(response.status_code),
-                'result': val_result,
-                'hasErrors': val_has_errors,
-                'information': val_info,
-                'errorMessage': formatted_error_msg or False
-            })
-            # Commit explícito para asegurar guardado antes de cualquier UserError
-            self.env.cr.commit()
-
-            # Lógica de salida / excepción
-            if has_errors or response.status_code not in (200, 201) or formatted_error_msg:
-                raise UserError(_("Error devuelto por la API Unidigital:\n%s") % (formatted_error_msg or "Error desconocido en API Unidigital"))
-
-            else:
-                if self.state == 'draft':
-                    self.action_posted()
-
+            except requests.exceptions.RequestException as e:
+                rec.hasErrors = "True"
+                rec.code = "500"
+                rec.errorMessage = f"Error de conexión con la API: {str(e)}"
+                _logger.error("Unidigital Excepción de Red: %s", str(e))
+                
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'title': _('Comprobante Enviado'),
-                        'message': _('La retención de IVA fue procesada exitosamente en Unidigital.'),
-                        'type': 'success',
-                        'sticky': False,
+                        'title': _('Error de Conexión'),
+                        'message': rec.errorMessage,
+                        'type': 'danger',
+                        'sticky': True,
                     }
                 }
-
-        except requests.exceptions.RequestException as e:
-            err_str = str(e)
-            self.write({
-                'errorMessage': err_str,
-                'hasErrors': 'true'
-            })
-            self.env.cr.commit()
-            _logger.error("Error de conexión con API Unidigital: %s", err_str)
-            raise UserError(_("No se pudo conectar con el servidor de Unidigital: %s") % err_str)
