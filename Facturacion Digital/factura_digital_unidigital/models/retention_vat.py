@@ -86,9 +86,9 @@ class RetentionVat(models.Model):
                     {
                         "TaxCode": "G",
                         "TaxBase": round(tax_base, 2),
-                        "TaxPercent": round(ret_rate, 2),        # <--- AQUÍ EL CAMBIO: Unidigital espera 75.00/100.00 aquí
+                        "TaxPercent": round(ret_rate, 2),
                         "TaxAmount": round(vat_amount, 2),
-                        "RetentionPercent": round(ret_rate, 2),  # <--- También 75.00/100.00
+                        "RetentionPercent": round(ret_rate, 2),
                         "AmountRetained": round(retained_amt, 2)
                     }
                 ],
@@ -165,12 +165,17 @@ class RetentionVat(models.Model):
                 rec.code = str(res_json.get("code") if res_json.get("code") is not None else http_status)
                 rec.hasErrors = str(res_json.get("hasErrors", http_status not in (200, 201)))
                 rec.result = json.dumps(res_json.get("result")) if res_json.get("result") is not None else str(res_json.get("result", ""))
-                rec.information = json.dumps(res_json.get("information", []))
 
-                # Mapear mensajes de error
+                # --- LÓGICA DE MANEJO DE ERRORS VS INFORMATION ---
                 errors_data = res_json.get("errors", [])
-                if errors_data:
-                    if isinstance(errors_data, list):
+                has_errors = res_json.get("hasErrors", False) or http_status not in (200, 201)
+
+                if has_errors or errors_data:
+                    # Si hay error, guardamos el contenido del arreglo 'errors' en el campo 'information'
+                    rec.information = json.dumps(errors_data, indent=2, ensure_ascii=False)
+                    
+                    # Construimos también el mensaje legible para rec.errorMessage
+                    if isinstance(errors_data, list) and len(errors_data) > 0:
                         error_lines = []
                         for err in errors_data:
                             if isinstance(err, dict):
@@ -180,10 +185,10 @@ class RetentionVat(models.Model):
                                 error_lines.append(f"- {str(err)}")
                         rec.errorMessage = "\n".join(error_lines)
                     else:
-                        rec.errorMessage = str(errors_data)
-                elif http_status not in (200, 201) or res_json.get("hasErrors"):
-                    rec.errorMessage = res_json.get("message") or response.text or f"Error HTTP {http_status} en la petición API"
+                        rec.errorMessage = str(errors_data) or res_json.get("message") or response.text
                 else:
+                    # Si responde con éxito (HTTP 200/201 sin hasErrors), guardamos el information original
+                    rec.information = json.dumps(res_json.get("information", []), indent=2, ensure_ascii=False)
                     rec.errorMessage = ""
 
                 # 3. Notificación a la interfaz de Odoo
@@ -217,6 +222,7 @@ class RetentionVat(models.Model):
                 rec.hasErrors = "True"
                 rec.code = "500"
                 rec.errorMessage = f"Error de conexión con la API: {str(e)}"
+                rec.information = json.dumps([{"error": str(e)}], indent=2, ensure_ascii=False)
                 _logger.error("Unidigital Excepción de Red: %s", str(e))
                 
                 return {
