@@ -680,73 +680,77 @@ class  AccountMoveLine(models.Model):
     linea_exenta = fields.Boolean(default=False)
 
 
-    @api.constrains('quantity', 'price_unit', 'price_subtotal')
+    @api.constrains('quantity', 'price_unit')
     def _check_credit_note_limits_seniat(self):
         """
         Valida que la cantidad y el precio unitario de la línea de la Nota de Crédito
-        no superen los valores de la factura referenciada en 'fact_afect'.
+        no superen los valores de la factura referenciada en el campo 'fact_afect' (número de factura).
         """
+        
         for line in self:
-            # 1. Omitir secciones, notas o líneas sin producto
-            if line.display_type or not line.product_id:
-                continue
-
             move = line.move_id
-
-            # 2. Aplicar solo a Notas de Crédito de Clientes (out_refund) con factura afectada
+            
+            # 1. Aplicar solo a Notas de Crédito de Clientes (out_refund) 
+            # y si el campo 'fact_afect' tiene el número de la factura.
             if move.move_type == 'out_refund' and move.fact_afect:
-
-                # Buscar la Factura Original (out_invoice) por el número indicado
+                
+                # --- BÚSQUEDA DE LA FACTURA ORIGINAL POR NÚMERO ---
+                # Buscar la Factura Original (out_invoice) cuyo campo 'name' coincida con 'fact_afect'.
                 original_invoice = self.env['account.move'].search([
-                    ('move_type', '=', 'out_invoice'),
-                    ('state', 'in', ['posted', 'paid']),
-                    ('invoice_number_next', '=', move.fact_afect),
+                    ('move_type', '=', 'out_invoice'), # Aseguramos que es una factura de cliente
+                    ('state', 'in', ['posted', 'paid']), # Debe estar validada
+                    ('invoice_number_next', '=', move.fact_afect), # El número de factura debe coincidir con 'fact_afect'
                 ], limit=1)
 
+                # ------------------------------------------------
+                
                 if not original_invoice:
+                    # Si no encontramos la factura original, no podemos validar.
+                    # Podrías lanzar un error aquí si es obligatorio, pero por ahora solo se ignora la validación.
                     continue
 
-                # 3. Mapear líneas de la factura original por producto
-                original_lines = original_invoice.invoice_line_ids.filtered(
-                    lambda l: l.product_id.id == line.product_id.id and not l.display_type
-                )
-
-                if not original_lines:
-                    continue
-
-                # Si hay varias líneas con el mismo producto, intenta afinar por nombre; de lo contrario toma la primera
-                matched_line = original_lines.filtered(lambda l: l.name == line.name)
-                original_line = matched_line[0] if matched_line else original_lines[0]
-
-                # 4. Validar Cantidad
-                original_qty = abs(original_line.quantity)
-                credit_note_qty = abs(line.quantity)
-
-                if round(credit_note_qty, 4) > round(original_qty, 4):
-                    raise ValidationError(_(
-                        "VALIDACIÓN SENIAT: La Cantidad (%.2f) de la línea '%s' no puede ser superior "
-                        "a la cantidad de la factura afectada (%.2f) (Factura: %s)."
-                    ) % (credit_note_qty, line.name or line.product_id.display_name, original_qty, original_invoice.name))
-
-                # 5. Obtener los Precios Unitarios Efectivos
-                # Si price_subtotal ya tiene valor, usaremos (price_subtotal / quantity)
-                # Si es 0.0, recurrimos a price_unit
-                if line.quantity and line.price_subtotal:
-                    credit_note_price = abs(line.price_subtotal / line.quantity)
                 else:
-                    credit_note_price = abs(line.price_unit)
+                    #if line.display_type:
+                        #continue # Omitir líneas de sección o nota
 
-                if original_line.quantity and original_line.price_subtotal:
-                    original_price = abs(original_line.price_subtotal / original_line.quantity)
-                else:
-                    original_price = abs(original_line.price_unit)
+                    # 2. Mapear las líneas de la factura original para comparación
+                    # Buscamos una coincidencia de línea basada en el producto y/o descripción.
+                    original_line = original_invoice.invoice_line_ids.filtered(lambda l: \
+                        l.product_id.id == line.product_id.id and \
+                        l.name == line.name
+                    )
+                    #raise UserError(_("xxx %s")%original_line)
+                    if not original_line:
+                        #raise UserError(_("Darrell"))
+                        continue 
+                    
+                    # Usamos la primera coincidencia
+                    original_line = original_line[0]
+                    
+                    # 3. Validar Cantidad
+                    original_qty = original_line.quantity
+                    credit_note_qty = line.quantity
+                    #raise UserError(_("original_qty %s, credit_note_qty %s")%(original_line.price_unit_ref,line.price_unit_ref))
+                    
+                    if credit_note_qty > original_qty:
+                        raise UserError(_(
+                            "VALIDACIÓN SENIAT: La Cantidad (%s) de la línea '%s' no puede ser superior "
+                            "a la cantidad de la factura afectada (%s) (Factura: %s)."
+                        ) % (credit_note_qty, line.name, original_qty, original_invoice.name))
 
-                # 6. Validar Precio Unitario
-                if round(credit_note_price, 2) > round(original_price, 2):
-                    raise ValidationError(_(
-                        "VALIDACIÓN SENIAT: El Precio Unitario (%.2f) de la línea '%s' no puede ser superior "
-                        "al precio unitario de la factura afectada (%.2f) (Factura: %s)."
-                    ) % (credit_note_price, line.name or line.product_id.display_name, original_price, original_invoice.name))
+                        #move._log_and_raise_fiscal_error("VALIDACIÓN SENIAT: La Cantidad (%s) de la línea '%s' no puede ser superior "
+                            #"a la cantidad de la factura afectada (%s) (Factura: %s)." % (credit_note_qty, line.name, original_qty, original_invoice.name))
+                    
+                    # 4. Validar Precio Unitario
+                    original_price = original_line.price_unit
+                    credit_note_price = line.price_unit
+
+                    if credit_note_price > original_price:
+                        raise UserError(_(
+                            "VALIDACIÓN SENIAT: El Precio Unitario (%.2f) de la línea '%s' no puede ser superior "
+                            "al precio unitario de la factura afectada (%.2f) (Factura: %s)."
+                        ) % (credit_note_price, line.name, original_price, original_invoice.name))
+
                         #move._log_and_raise_fiscal_error("VALIDACIÓN SENIAT: El Precio Unitario (%.2f) de la línea '%s' no puede ser superior "
                             #"al precio unitario de la factura afectada (%.2f) (Factura: %s)." % (credit_note_price, line.name, original_price, original_invoice.name))
 
