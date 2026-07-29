@@ -22,7 +22,7 @@ class RetentionVat(models.Model):
     code = fields.Char(copy=False, string="Código de respuesta servidor API")
 
     def _prepare_unidigital_retention_json(self):
-        """Construye el Payload exacto esperado por la API /createretention (sin wrapper dto)."""
+        """Construye el Payload exacto esperado por la API /createretention."""
         self.ensure_one()
 
         partner = self.partner_id
@@ -34,7 +34,7 @@ class RetentionVat(models.Model):
         code_rif = raw_vat[0] if raw_vat[0].isalpha() else 'J'
         number_rif = raw_vat[1:] if raw_vat[0].isalpha() else raw_vat
 
-        # 2. Formatear la fecha de emisión (ISO 8601 UTC)
+        # 2. Formatear la fecha de emisión
         target_date = self.voucher_delivery_date or self.accouting_date or fields.Date.today()
         emission_dt = datetime.combine(target_date, datetime.min.time()).strftime('%Y-%m-%dT%H:%M:%SZ')
 
@@ -67,8 +67,7 @@ class RetentionVat(models.Model):
             ret_rate = line.retention_rate or 75.00
             retained_amt = line.retention_amount
 
-            # Calcular la alícuota real del IVA (ej. 16%) para TaxPercent
-            # si vat_amount es el 16% de tax_base
+            # Cálculo de alícuota de IVA (generalmente 16%)
             tax_percent = round((vat_amount / tax_base * 100), 2) if tax_base > 0 else 16.00
 
             total_tax_base += tax_base
@@ -89,10 +88,10 @@ class RetentionVat(models.Model):
                     {
                         "TaxCode": "G",
                         "TaxBase": round(tax_base, 2),
-                        "TaxPercent": tax_percent,           # Alícuota (ej. 16.0)
-                        "TaxAmount": round(vat_amount, 2),    # Monto de IVA de la factura
-                        "RetentionPercent": round(ret_rate, 2),# % de Retención (ej. 75.0)
-                        "AmountRetained": round(retained_amt, 2) # Monto retenido
+                        "TaxPercent": tax_percent,
+                        "TaxAmount": round(vat_amount, 2),
+                        "RetentionPercent": round(ret_rate, 2),
+                        "AmountRetained": round(retained_amt, 2)
                     }
                 ],
                 "ISLR": []
@@ -102,7 +101,7 @@ class RetentionVat(models.Model):
         voucher_num_digits = ''.join(filter(str.isdigit, str(self.name or '')))
         numeric_voucher_number = int(voucher_num_digits[-8:]) if voucher_num_digits else self.id
 
-        # ESTRUCTURA CORREGIDA: Retornar los campos directamente en la raíz (sin key "dto")
+        # Estructura plana (requerida directamente por Unidigital sin contenedor dto)
         return {
             "DocumentType": "RI",
             "Number": numeric_voucher_number,
@@ -121,3 +120,107 @@ class RetentionVat(models.Model):
             "SystemReference": self.name or f"RI-{self.id}",
             "Documents": documents_payload
         }
+
+    def envia_comp_ret_iva(self):
+        """Método invocado por el botón de la vista XML."""
+        for rec in self:
+            company = rec.company_id
+            url = getattr(company, 'unidigital_retention_url', False) or 'https://qa.unidigital.global/digitalinvoice-core/documents/createretention'
+            token = getattr(company, 'unidigital_token', False)
+
+            if not url:
+                raise UserError(_("No se ha configurado la URL de retenciones para Unidigital."))
+
+            # 1. Generar JSON y almacenarlo
+            payload_data = rec._prepare_unidigital_retention_json()
+            json_payload = json.dumps(payload_data, indent=4, ensure_ascii=False)
+            rec.json_enviado = json_payload
+
+            headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+            if token:
+                headers['Authorization'] = f"Bearer {token}"
+
+            _logger.info("Enviando Retención IVA Unidigital (ID %s): %s", rec.id, json_payload)
+
+            try:
+                response = requests.post(url, data=json_payload.encode('utf-8'), headers=headers, timeout=30)
+                http_status = response.status_code
+                
+                try:
+                    res_json = response.json() if response.content else {}
+                except Exception:
+                    res_json = {"raw_response": response.text}
+
+                _logger.info("Respuesta Unidigital (ID %s): %s", rec.id, res_json)
+
+                # 2. Guardar respuesta de la API
+                rec.code = str(res_json.get("code") if res_json.get("code") is not None else http_status)
+                rec.hasErrors = str(res_json.get("hasErrors", http_status not in (200, 201)))
+                rec.result = json.dumps(res_json.get("result")) if res_json.get("result") is not None else str(res_json.get("result", ""))
+                rec.information = json.dumps(res_json.get("information", []))
+
+                # Extraer errores si existen
+                errors_data = res_json.get("errors", [])
+                if errors_data:
+                    if isinstance(errors_data, list):
+                        error_lines = []
+                        for err in errors_data:
+                            if isinstance(err, dict):
+                                msg = err.get('message') or err.get('errorMessage') or str(err)
+                                error_lines.append(f"- {msg}")
+                            else:
+                                error_lines.append(f"- {str(err)}")
+                        rec.errorMessage = "\n".join(error_lines)
+                    else:
+                        rec.errorMessage = str(errors_data)
+                elif http_status not in (200, 201) or res_json.get("hasErrors"):
+                    rec.errorMessage = res_json.get("message") or response.text or "Error en la petición API"
+                else:
+                    rec.errorMessage = ""
+
+                # 3. Respuesta a la UI de Odoo
+                if http_status in (200, 201) and not res_json.get("hasErrors"):
+                    if hasattr(rec, 'state') and rec.state == 'draft' and hasattr(rec, 'action_posted'):
+                        rec.action_posted()
+
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Comprobante Enviado'),
+                            'message': _('La retención de IVA fue procesada exitosamente en Unidigital.'),
+                            'type': 'success',
+                            'sticky': False,
+                        }
+                    }
+                else:
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Error devuelto por la API Unidigital'),
+                            'message': rec.errorMessage or _("Error procesando la retención."),
+                            'type': 'danger',
+                            'sticky': True,
+                        }
+                    }
+
+            except requests.exceptions.RequestException as e:
+                rec.hasErrors = "True"
+                rec.code = "500"
+                rec.errorMessage = f"Error de conexión con la API: {str(e)}"
+                _logger.error("Unidigital Excepción de Red: %s", str(e))
+                
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Error de Conexión'),
+                        'message': rec.errorMessage,
+                        'type': 'danger',
+                        'sticky': True,
+                    }
+                }
