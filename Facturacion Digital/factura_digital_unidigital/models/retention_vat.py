@@ -22,25 +22,23 @@ class RetentionVat(models.Model):
     code = fields.Char(copy=False, string="Código de respuesta servidor API")
 
     def _prepare_unidigital_retention_json(self):
-        """Construye el Payload plano esperado por la API /createretention de Unidigital."""
+        """Construye el Payload plano compatible con la API /createretention de Unidigital."""
         self.ensure_one()
 
         partner = self.partner_id
         if not partner.vat:
             raise UserError(_("El Partner %s no tiene un número de RIF/CÉDULA configurado.") % partner.name)
 
-        # 1. Separación del RIF/Cédula (Ejemplo: J-600500401 -> J / 600500401)
+        # 1. Limpieza y separación de RIF (Ejemplo: J-307048670 -> Code: J, Registry: 307048670)
         raw_vat = str(partner.vat).replace('-', '').replace(' ', '').upper()
         code_rif = raw_vat[0] if raw_vat[0].isalpha() else 'J'
         number_rif = raw_vat[1:] if raw_vat[0].isalpha() else raw_vat
 
-        # 2. Formatear la fecha de emisión (ISO 8601 UTC)
+        # 2. Fecha de emisión en formato UTC ISO 8601
         target_date = self.voucher_delivery_date or self.accouting_date or fields.Date.today()
         emission_dt = datetime.combine(target_date, datetime.min.time()).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-        curr_name = "VES"
-
-        # 3. Mapeo del Listado de Documentos Retenidos
+        # 3. Mapeo de facturas/documentos retenidos
         documents_payload = []
         total_tax_base = 0.0
         total_tax_amount = 0.0
@@ -49,6 +47,7 @@ class RetentionVat(models.Model):
         for line in self.retention_line_ids:
             invoice = line.invoice_id
             
+            # Fecha del documento (DD/MM/YYYY)
             inv_date = invoice.invoice_date.strftime('%d/%m/%Y') if invoice and invoice.invoice_date else target_date.strftime('%d/%m/%Y')
             inv_number = invoice.name or line.invoice_number or "00000001"
             ctrl_number = getattr(invoice, 'nro_control', False) or getattr(invoice, 'l10n_ve_control_number', False) or "00-00000001"
@@ -64,11 +63,10 @@ class RetentionVat(models.Model):
             exempt_amt = line.valida_excento() if hasattr(line, 'valida_excento') else 0.0
             tax_base = line.base_imponible if line.base_imponible else line.amount_untaxed
             vat_amount = line.amount_vat_ret
+            
+            # Porcentaje de retención (75.00 o 100.00)
             ret_rate = line.retention_rate or 75.00
             retained_amt = line.retention_amount
-
-            # Alícuota real del IVA (ej. 16.0%)
-            tax_percent = round((vat_amount / tax_base * 100), 2) if tax_base > 0 else 16.00
 
             total_tax_base += tax_base
             total_tax_amount += vat_amount
@@ -81,27 +79,26 @@ class RetentionVat(models.Model):
                 "Serie": "0",
                 "ControlNumber": ctrl_number,
                 "AffectedDocumentNumber": getattr(invoice, 'fact_afect', '') or "",
-                "Currency": curr_name,
+                "Currency": "VES",
                 "ExemptAmount": round(exempt_amt, 2),
                 "Total": round(tax_base + vat_amount + exempt_amt, 2),
                 "IVA": [
                     {
                         "TaxCode": "G",
                         "TaxBase": round(tax_base, 2),
-                        "TaxPercent": tax_percent,
+                        "TaxPercent": round(ret_rate, 2),        # <--- AQUÍ EL CAMBIO: Unidigital espera 75.00/100.00 aquí
                         "TaxAmount": round(vat_amount, 2),
-                        "RetentionPercent": round(ret_rate, 2),
+                        "RetentionPercent": round(ret_rate, 2),  # <--- También 75.00/100.00
                         "AmountRetained": round(retained_amt, 2)
                     }
                 ],
                 "ISLR": []
             })
 
-        # Extraer dígitos para evitar desbordamiento Int32
+        # Número de comprobante limpio (solo enteros para el campo Number)
         voucher_num_digits = ''.join(filter(str.isdigit, str(self.name or '')))
         numeric_voucher_number = int(voucher_num_digits[-8:]) if voucher_num_digits else self.id
 
-        # Payload PLANO (Sin wrapper 'dto')
         return {
             "DocumentType": "RI",
             "Number": numeric_voucher_number,
