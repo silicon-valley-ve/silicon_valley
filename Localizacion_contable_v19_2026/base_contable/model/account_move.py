@@ -734,7 +734,7 @@ class  AccountMoveLine(models.Model):
                     #raise UserError(_("original_qty %s, credit_note_qty %s")%(original_line.price_unit_ref,line.price_unit_ref))
                     
                     if credit_note_qty > original_qty:
-                        raise ValidationError(_(
+                        raise UserError(_(
                             "VALIDACIÓN SENIAT: La Cantidad (%s) de la línea '%s' no puede ser superior "
                             "a la cantidad de la factura afectada (%s) (Factura: %s)."
                         ) % (credit_note_qty, line.name, original_qty, original_invoice.name))
@@ -747,7 +747,7 @@ class  AccountMoveLine(models.Model):
                     credit_note_price = line.price_unit
 
                     if credit_note_price > original_price:
-                        raise ValidationError(_(
+                        raise UserError(_(
                             "VALIDACIÓN SENIAT: El Precio Unitario (%.2f) de la línea '%s' no puede ser superior "
                             "al precio unitario de la factura afectada (%.2f) (Factura: %s)."
                         ) % (credit_note_price, line.name, original_price, original_invoice.name))
