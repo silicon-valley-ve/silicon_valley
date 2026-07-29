@@ -19,12 +19,12 @@ class RetentionVat(models.Model):
     errorMessage = fields.Text(copy=False)
     information = fields.Char(copy=False)
     json_enviado = fields.Text(string="JSON Enviado", copy=False)
-    proximo_doc = fields.Char(compute='_compute_proximo_valor')
-    proximo_ctrl = fields.Char(compute='_compute_proximo_ctrl')
+    #proximo_doc = fields.Char(compute='_compute_proximo_valor')
+    #proximo_ctrl = fields.Char(compute='_compute_proximo_ctrl')
     code = fields.Char(copy=False, string="Código de respuesta servidor API")
 
     def _prepare_unidigital_retention_json(self):
-        """Construye el Payload exacto exigido por la API /createretention."""
+        """Construye el Payload envuelto en 'dto' exigido por la API /createretention."""
         self.ensure_one()
 
         partner = self.partner_id
@@ -40,7 +40,7 @@ class RetentionVat(models.Model):
         target_date = self.voucher_delivery_date or self.accouting_date or fields.Date.today()
         emission_dt = datetime.combine(target_date, datetime.min.time()).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-        # 3. Forzar moneda a VES (Unidigital no acepta VED ni VEF)
+        # 3. Forzar moneda a VES
         curr_name = "VES"
 
         # 4. Mapeo del Listado de Documentos Retenidos
@@ -97,10 +97,15 @@ class RetentionVat(models.Model):
                 "ISLR": []
             })
 
-        voucher_num_digits = ''.join(filter(str.isdigit, str(self.name or '1')))
-        numeric_voucher_number = int(voucher_num_digits) if voucher_num_digits else 1
+        # Evitar desbordamiento de Int32 (máx 2.147.483.647) en 'Number'
+        voucher_num_digits = ''.join(filter(str.isdigit, str(self.name or '')))
+        if voucher_num_digits:
+            # Tomar los últimos 8 dígitos para garantizar un entero válido dentro de Int32
+            numeric_voucher_number = int(voucher_num_digits[-8:])
+        else:
+            numeric_voucher_number = self.id
 
-        payload = {
+        dto_payload = {
             "DocumentType": "RI",
             "Number": numeric_voucher_number,
             "EmissionDateAndTime": emission_dt,
@@ -115,18 +120,15 @@ class RetentionVat(models.Model):
             "TaxAmount": round(total_tax_amount, 2),
             "TotalIGTF": 0,
             "AmountRetained": round(total_retained, 2),
-            "SystemReference": self.name or "RET-001",
+            "SystemReference": self.name or f"RET-{self.id}",
             "Documents": documents_payload
         }
 
-        return payload
+        # La API requiere que todo vaya envuelto dentro de 'dto'
+        return {"dto": dto_payload}
 
     def envia_comp_ret_iva(self):
-        self.json_enviado=self._prepare_unidigital_retention_json()
-
-
-    def envia_comp_ret_iva_org(self):
-        """Envía el JSON de Retención de IVA a la API Unidigital garantizando el guardado del JSON."""
+        """Envía el JSON de Retención de IVA a la API Unidigital."""
         self.ensure_one()
 
         company = self.company_id
@@ -136,11 +138,11 @@ class RetentionVat(models.Model):
         if not url:
             raise UserError(_("No se ha configurado la URL de retenciones para Unidigital."))
 
-        # 1. Armar JSON
+        # 1. Armar JSON dentro del wrapper 'dto'
         payload_data = self._prepare_unidigital_retention_json()
         json_payload = json.dumps(payload_data, indent=2, ensure_ascii=False)
         
-        # 2. GUARDAR EN BD Y HACER COMMIT (Evita que el UserError borre el JSON)
+        # 2. Guardar en BD antes de consultar a la API (persistir sin importar respuesta)
         self.write({'json_enviado': json_payload})
         self.env.cr.commit()
 
@@ -155,8 +157,6 @@ class RetentionVat(models.Model):
 
         try:
             response = requests.post(url, data=json_payload.encode('utf-8'), headers=headers, timeout=30)
-            
-            # Guardar código HTTP de respuesta
             self.write({'code': str(response.status_code)})
 
             try:
@@ -166,7 +166,6 @@ class RetentionVat(models.Model):
 
             _logger.info("Respuesta Unidigital (ID %s): %s", self.id, res_json)
 
-            # Actualizar campos con la respuesta de la API
             val_result = str(res_json.get('result', ''))
             val_has_errors = str(res_json.get('hasErrors', response.status_code not in (200, 201)))
             val_info = json.dumps(res_json.get('information', []))
@@ -177,7 +176,7 @@ class RetentionVat(models.Model):
                 'information': val_info,
             })
 
-            # Verificar si la API devolvió errores
+            # Verificar si hubo errores en la API
             if res_json.get('hasErrors') or response.status_code not in (200, 201):
                 error_msg = ""
                 errors_list = res_json.get('errors', [])
@@ -196,7 +195,7 @@ class RetentionVat(models.Model):
                     error_msg = res_json.get('message') or res_json.get('Message') or response.text or "Error desconocido en API Unidigital"
 
                 self.write({'errorMessage': error_msg})
-                self.env.cr.commit()  # Asegurar que se guarden los errores en el formulario
+                self.env.cr.commit()
                 
                 raise UserError(_("Error devuelto por la API Unidigital:\n%s") % error_msg)
 
