@@ -744,17 +744,19 @@ class  AccountMoveLine(models.Model):
                             #"a la cantidad de la factura afectada (%s) (Factura: %s)." % (credit_note_qty, line.name, original_qty, original_invoice.name))
                     
                     # 4. Validar Precio Unitario
-                    original_price = original_line.price_unit
-                    credit_note_price = line.price_unit
+                    aux=line.product_id.standard_price
+                    if aux!=line.price_unit:
+                        original_price = original_line.price_unit
+                        credit_note_price = line.price_unit
 
-                    if credit_note_price > original_price:
-                        raise UserError(_(
-                            "VALIDACIÓN SENIAT: El Precio Unitario (%.2f) de la línea '%s' no puede ser superior "
-                            "al precio unitario de la factura afectada (%.2f) (Factura: %s)."
-                        ) % (credit_note_price, line.name, original_price, original_invoice.name))
+                        if credit_note_price > original_price:
+                            raise UserError(_(
+                                "VALIDACIÓN SENIAT: El Precio Unitario (%.2f) de la línea '%s' no puede ser superior "
+                                "al precio unitario de la factura afectada (%.2f) (Factura: %s)."
+                            ) % (credit_note_price, line.name, original_price, original_invoice.name))
 
-                        #move._log_and_raise_fiscal_error("VALIDACIÓN SENIAT: El Precio Unitario (%.2f) de la línea '%s' no puede ser superior "
-                            #"al precio unitario de la factura afectada (%.2f) (Factura: %s)." % (credit_note_price, line.name, original_price, original_invoice.name))
+                            #move._log_and_raise_fiscal_error("VALIDACIÓN SENIAT: El Precio Unitario (%.2f) de la línea '%s' no puede ser superior "
+                                #"al precio unitario de la factura afectada (%.2f) (Factura: %s)." % (credit_note_price, line.name, original_price, original_invoice.name))
 
     # ESTA FUNCION VALIDA QUE NO SE AGREGUEN PRODUCTOS NUEVOS EN LA NC DE CLEINETES SI NO ESTAN EN LA FACTURA AFECTADA
     @api.constrains('product_id')
