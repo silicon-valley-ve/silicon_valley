@@ -83,11 +83,11 @@ class AccountMove(models.Model):
         for rec in self:
             if rec.company_id.usar_fact_digi==True:
                 rec.valida_pagos_progra_contado()
-                #rec.action_post()
+                rec.action_post()
                 #if rec.code!='200':
                     #rec.enviar_fact_digital()
-                if rec.code=='200':
-                    rec.action_post()
+                #if rec.code=='200':
+                    #rec.action_post()
 
     def valida_pagos_progra_contado(self):
         # ELIMINAMOS la restricción que evitaba las Notas de Crédito (refund)
