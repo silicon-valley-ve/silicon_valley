@@ -84,8 +84,8 @@ class AccountMove(models.Model):
             if rec.company_id.usar_fact_digi==True:
                 rec.valida_pagos_progra_contado()
                 #rec.action_post()
-                if rec.code!='200':
-                    rec.enviar_fact_digital()
+                #if rec.code!='200':
+                    #rec.enviar_fact_digital()
                 if rec.code=='200':
                     rec.action_post()
 
