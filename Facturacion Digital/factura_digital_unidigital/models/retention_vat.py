@@ -10,6 +10,7 @@ from odoo.exceptions import UserError, ValidationError
 _logger = logging.getLogger(__name__)
 
 
+
 class RetentionVat(models.Model):
     """Integración con API Unidigital para Comprobantes de Retención de IVA SENIAT."""
     _inherit = 'vat.retention'
