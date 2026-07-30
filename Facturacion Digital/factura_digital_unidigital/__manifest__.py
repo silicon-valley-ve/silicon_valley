@@ -13,6 +13,7 @@
                 'views/company_views.xml',
                 'views/account_move_views.xml',
                 'views/retention_vat_provee_views.xml',
+                'views/retention_vat_islr_views.xml',
                 
         ],
         'license': 'LGPL-3',
