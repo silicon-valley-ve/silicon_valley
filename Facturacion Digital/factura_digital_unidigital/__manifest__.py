@@ -8,7 +8,7 @@
         'summary': '',
         'description': """""",
         'category': 'Customizations',
-        'depends': ['base','account','base_contable','factura_formato_libre'],
+        'depends': ['base','account','base_contable','factura_formato_libre','isrl_retention','iva_retention'],
         'data': [
                 'views/company_views.xml',
                 'views/account_move_views.xml',
