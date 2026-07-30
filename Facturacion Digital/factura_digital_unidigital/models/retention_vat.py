@@ -22,7 +22,6 @@ class RetentionVat(models.Model):
     code = fields.Char(copy=False, string="Código de respuesta servidor API")
     message = fields.Text(copy=False)
 
-
     def _prepare_unidigital_retention_json(self):
         """Construye el Payload plano compatible con la API /createretention de Unidigital."""
         self.ensure_one()
@@ -36,11 +35,35 @@ class RetentionVat(models.Model):
         code_rif = raw_vat[0] if raw_vat[0].isalpha() else 'J'
         number_rif = raw_vat[1:] if raw_vat[0].isalpha() else raw_vat
 
-        # 2. Fecha de emisión en formato UTC ISO 8601
+        # 2. Dirección limpia (evitar espacios en blanco)
+        raw_address = False
+        if hasattr(self, 'get_address_partner'):
+            raw_address = self.get_address_partner()
+        if not raw_address:
+            raw_address = partner.street or partner.contact_address or ""
+
+        clean_address = str(raw_address).strip()
+        final_address = clean_address if clean_address else "Caracas, Venezuela"
+
+        # 3. Limpieza estricta de Teléfono (solo dígitos numéricos)
+        raw_phone = partner.phone or partner.mobile or "02120000000"
+        clean_phone = ''.join(filter(str.isdigit, str(raw_phone)))
+        final_phone = clean_phone if len(clean_phone) >= 7 else "02120000000"
+
+        # 4. Mapeo exacto de Tipo de Persona desde res.partner -> people_type
+        perceiver_mapping = {
+            'resident_nat_people': 'PN-RESIDENTE',
+            'non_resit_nat_people': 'PN-NO-RESIDENTE',
+            'domi_ledal_entity': 'PJ-DOMICILIADA',
+            'legal_ent_not_domicilied': 'PJ-NO-DOMICILIADA',
+        }
+        perceiver_type = perceiver_mapping.get(getattr(partner, 'people_type', False), 'PJ-DOMICILIADA')
+
+        # 5. Fecha de emisión en formato UTC ISO 8601
         target_date = self.voucher_delivery_date or self.accouting_date or fields.Date.today()
         emission_dt = datetime.combine(target_date, datetime.min.time()).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-        # 3. Mapeo de facturas/documentos retenidos
+        # 6. Mapeo de facturas/documentos retenidos
         documents_payload = []
         total_tax_base = 0.0
         total_tax_amount = 0.0
@@ -108,10 +131,10 @@ class RetentionVat(models.Model):
             "Name": partner.name or "",
             "FiscalRegistryCode": code_rif,
             "FiscalRegistry": number_rif,
-            "Address": partner.street or "Caracas, Venezuela",
-            "Phone": partner.phone or partner.mobile or "02120000000",
+            "Address": final_address,
+            "Phone": final_phone,
             "EmailTo": partner.email or "comprobantes@dominio.com",
-            "PerceiverType": "PJ-DOMICILIADA",
+            "PerceiverType": perceiver_type,
             "TaxBase": round(total_tax_base, 2),
             "TaxAmount": round(total_tax_amount, 2),
             "TotalIGTF": 0,
@@ -123,14 +146,14 @@ class RetentionVat(models.Model):
     def envia_comp_ret_iva(self):
         """Método invocado por el botón de la vista XML."""
         for rec in self:
-            company = rec.company_id
+            company = rec.company_id or self.env.company
             url = getattr(company, 'unidigital_retention_url', False) or 'https://qa.unidigital.global/digitalinvoice-core/documents/createretention'
 
             # 1. Obtener y refrescar el Token usando el método de res.company
-            token = company.unidg_jwt_token
+            token = getattr(company, 'unidg_jwt_token', False)
             if not token and hasattr(company, 'unidg_get_token'):
                 company.unidg_get_token()
-                token = company.unidg_jwt_token
+                token = getattr(company, 'unidg_jwt_token', False)
 
             # 2. Generar el JSON a enviar
             payload_data = rec._prepare_unidigital_retention_json()
@@ -157,30 +180,34 @@ class RetentionVat(models.Model):
                 except Exception:
                     res_json = {}
 
-                _logger.info("Respuesta Unidigital (ID %s - Status %s): %s", rec.id, http_status, response.text)
+                _logger.info("Respuesta Unidigital IVA (ID %s - Status %s): %s", rec.id, http_status, response.text)
 
                 # 3. Mapeo de campos de estado
                 rec.code = str(res_json.get("code") if res_json.get("code") is not None else http_status)
                 rec.hasErrors = str(res_json.get("hasErrors", http_status not in (200, 201)))
                 rec.result = json.dumps(res_json.get("result")) if res_json.get("result") is not None else str(res_json.get("result", ""))
 
-                # 4. Extracción del mensaje exacto desde la API
+                # 4. Extracción del mensaje exacto desde la API (incluyendo sub-errores)
                 api_msg = ""
                 errors_data = res_json.get("errors", [])
-                
-                # Caso Unidigital: El mensaje detallado viene dentro de errors[0]['message']
+
                 if isinstance(errors_data, list) and len(errors_data) > 0:
                     first_err = errors_data[0]
                     if isinstance(first_err, dict):
-                        api_msg = first_err.get("message") or ""
+                        sub_errors = first_err.get("errors", [])
+                        if isinstance(sub_errors, list) and len(sub_errors) > 0:
+                            sub_msg_list = [e.get("errorMessage", "") for e in sub_errors if isinstance(e, dict) and e.get("errorMessage")]
+                            if sub_msg_list:
+                                api_msg = "\n".join(sub_msg_list)
+
+                        if not api_msg:
+                            api_msg = first_err.get("message") or ""
 
                 if not api_msg:
                     api_msg = res_json.get("message") or response.text or f"Respuesta HTTP {http_status}"
 
-                # Asignación al campo Mensaje del API
                 rec.message = str(api_msg)
 
-                # Guardar detalle en information y errorMessage
                 if errors_data:
                     rec.information = json.dumps(errors_data, indent=2, ensure_ascii=False)
                     rec.errorMessage = str(api_msg)
