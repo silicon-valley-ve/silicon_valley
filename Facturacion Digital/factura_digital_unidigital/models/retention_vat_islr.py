@@ -22,8 +22,6 @@ class RetentionVatIslr(models.Model):
     code = fields.Char(copy=False, string="Código de respuesta servidor API")
     message = fields.Text(copy=False)
 
-
-
     def _prepare_unidigital_islr_json(self):
         """Construye el Payload plano para ISLR compatible con /createretention de Unidigital."""
         self.ensure_one()
@@ -61,7 +59,7 @@ class RetentionVatIslr(models.Model):
             'resident_nat_people': 'PN-RESIDENTE',
             'non_resit_nat_people': 'PN-NO-RESIDENTE',
             'domi_ledal_entity': 'PJ-DOMICILIADA',
-            'legal_ent_not_domicilied': 'PJ-NO-RESIDENTE',
+            'legal_ent_not_domicilied': 'PJ-NO-DOMICILIADA',
         }
         perceiver_type = perceiver_mapping.get(getattr(partner, 'people_type', False), 'PJ-DOMICILIADA')
 
