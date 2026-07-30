@@ -126,25 +126,13 @@ class RetentionVat(models.Model):
             company = rec.company_id
             url = getattr(company, 'unidigital_retention_url', False) or 'https://qa.unidigital.global/digitalinvoice-core/documents/createretention'
 
-            # 1. Búsqueda y extracción del Token en res.company
-            token = False
-            
-            # Intento por métodos conocidos
-            if hasattr(company, 'unidigital_get_token') and callable(getattr(company, 'unidigital_get_token')):
-                token = company.unidigital_get_token()
-            elif hasattr(company, 'get_unidigital_token') and callable(getattr(company, 'get_unidigital_token')):
-                token = company.get_unidigital_token()
-            elif hasattr(company, 'get_token_unidigital') and callable(getattr(company, 'get_token_unidigital')):
-                token = company.get_token_unidigital()
-            
-            # Intento por campos conocidos si no vino de método
-            if not token:
-                token = getattr(company, 'unidigital_token', False) or getattr(company, 'token_unidigital', False) or getattr(company, 'unidigital_api_token', False)
+            # 1. Obtener y refrescar el Token usando el método de res.company
+            token = company.unidg_jwt_token
+            if not token and hasattr(company, 'unidg_get_token'):
+                company.unidg_get_token()
+                token = company.unidg_jwt_token
 
-            _logger.info("=== DEBUG TOKEN UNIDIGITAL ===")
-            _logger.info("Company ID: %s | Token obtenido: %s", company.id, token if token else "NINGUNO (False)")
-
-            # 2. Generación del Payload
+            # 2. Generar el JSON a enviar
             payload_data = rec._prepare_unidigital_retention_json()
             json_payload = json.dumps(payload_data, indent=4, ensure_ascii=False)
             rec.json_enviado = json_payload
@@ -156,7 +144,7 @@ class RetentionVat(models.Model):
             if token:
                 headers['Authorization'] = f"Bearer {token}"
             else:
-                _logger.warning("ATENCIÓN: Se enviará la petición SIN cabecera Authorization porque token es False.")
+                _logger.warning("ALERTA: No se pudo obtener el token Unidigital para la compañía %s", company.name)
 
             _logger.info("Enviando Retención IVA Unidigital (ID %s): %s", rec.id, json_payload)
 
@@ -171,31 +159,36 @@ class RetentionVat(models.Model):
 
                 _logger.info("Respuesta Unidigital (ID %s - Status %s): %s", rec.id, http_status, response.text)
 
-                # 3. Guardar en los campos del modelo
+                # 3. Mapeo de campos de estado
                 rec.code = str(res_json.get("code") if res_json.get("code") is not None else http_status)
                 rec.hasErrors = str(res_json.get("hasErrors", http_status not in (200, 201)))
                 rec.result = json.dumps(res_json.get("result")) if res_json.get("result") is not None else str(res_json.get("result", ""))
 
-                # Captura el mensaje retornado
-                api_msg = res_json.get("message")
-                if not api_msg:
-                    api_msg = response.text if response.text else f"Respuesta HTTP {http_status}: {response.reason}"
+                # 4. Extracción del mensaje exacto desde la API
+                api_msg = ""
+                errors_data = res_json.get("errors", [])
                 
+                # Caso Unidigital: El mensaje detallado viene dentro de errors[0]['message']
+                if isinstance(errors_data, list) and len(errors_data) > 0:
+                    first_err = errors_data[0]
+                    if isinstance(first_err, dict):
+                        api_msg = first_err.get("message") or ""
+
+                if not api_msg:
+                    api_msg = res_json.get("message") or response.text or f"Respuesta HTTP {http_status}"
+
+                # Asignación al campo Mensaje del API
                 rec.message = str(api_msg)
 
-                # Detalle de errores / información
-                errors_data = res_json.get("errors", [])
+                # Guardar detalle en information y errorMessage
                 if errors_data:
                     rec.information = json.dumps(errors_data, indent=2, ensure_ascii=False)
-                    rec.errorMessage = str(errors_data)
-                elif res_json.get("information"):
-                    rec.information = json.dumps(res_json.get("information"), indent=2, ensure_ascii=False)
-                    rec.errorMessage = ""
+                    rec.errorMessage = str(api_msg)
                 else:
                     rec.information = json.dumps(res_json, indent=2, ensure_ascii=False)
-                    rec.errorMessage = rec.message
+                    rec.errorMessage = str(api_msg)
 
-                # 4. Respuesta UI
+                # 5. Respuesta e interacción con la UI de Odoo
                 if http_status in (200, 201) and not res_json.get("hasErrors"):
                     if hasattr(rec, 'state') and rec.state == 'draft' and hasattr(rec, 'action_posted'):
                         rec.action_posted()
