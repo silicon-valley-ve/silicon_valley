@@ -22,6 +22,8 @@ class RetentionVatIslr(models.Model):
     code = fields.Char(copy=False, string="Código de respuesta servidor API")
     message = fields.Text(copy=False)
 
+
+
     def _prepare_unidigital_islr_json(self):
         """Construye el Payload plano para ISLR compatible con /createretention de Unidigital."""
         self.ensure_one()
@@ -39,7 +41,7 @@ class RetentionVatIslr(models.Model):
         code_rif = raw_vat[0] if raw_vat[0].isalpha() else 'J'
         number_rif = raw_vat[1:] if raw_vat[0].isalpha() else raw_vat
 
-        # 2. Dirección limpia (evitar solo espacios en blanco)
+        # 2. Dirección limpia (evitar espacios en blanco)
         raw_address = False
         if hasattr(self, 'get_address_partner'):
             raw_address = self.get_address_partner()
@@ -54,19 +56,14 @@ class RetentionVatIslr(models.Model):
         clean_phone = ''.join(filter(str.isdigit, str(raw_phone)))
         final_phone = clean_phone if len(clean_phone) >= 7 else "02120000000"
 
-        # 4. Mapeo dinámico de Tipo de Persona (PerceiverType)
-        # Intenta tomar el código del campo people_type de Odoo localización o usa valor por defecto
-        perceiver_type = "PJ-DOMICILIADA"
-        if hasattr(partner, 'people_type') and partner.people_type:
-            pt_code = str(partner.people_type).upper()
-            if 'PNRE' in pt_code or 'PN_RESIDENTE' in pt_code:
-                perceiver_type = "PN-RESIDENTE"
-            elif 'PJDO' in pt_code or 'PJ_DOMICILIADA' in pt_code:
-                perceiver_type = "PJ-DOMICILIADA"
-            elif 'PNDO' in pt_code or 'PN_NO_RESIDENTE' in pt_code:
-                perceiver_type = "PN-NO-RESIDENTE"
-            elif 'PJND' in pt_code or 'PJ_NO_DOMICILIADA' in pt_code:
-                perceiver_type = "PJ-NO-DOMICILIADA"
+        # 4. Mapeo exacto de Tipo de Persona desde res.partner -> people_type
+        perceiver_mapping = {
+            'resident_nat_people': 'PN-RESIDENTE',
+            'non_resit_nat_people': 'PN-NO-RESIDENTE',
+            'domi_ledal_entity': 'PJ-DOMICILIADA',
+            'legal_ent_not_domicilied': 'PJ-NO-RESIDENTE',
+        }
+        perceiver_type = perceiver_mapping.get(getattr(partner, 'people_type', False), 'PJ-DOMICILIADA')
 
         # 5. Fecha de emisión en formato UTC ISO 8601
         target_date = self.date_isrl or fields.Date.today()
@@ -142,7 +139,7 @@ class RetentionVatIslr(models.Model):
             company = rec.company_id or self.env.company
             url = getattr(company, 'unidigital_retention_url', False) or 'https://qa.unidigital.global/digitalinvoice-core/documents/createretention'
 
-            # 1. Obtener y refrescar el Token
+            # 1. Obtener y refrescar el Token usando la misma lógica de IVA
             token = getattr(company, 'unidg_jwt_token', False)
             if not token and hasattr(company, 'unidg_get_token'):
                 company.unidg_get_token()
@@ -187,7 +184,15 @@ class RetentionVatIslr(models.Model):
                 if isinstance(errors_data, list) and len(errors_data) > 0:
                     first_err = errors_data[0]
                     if isinstance(first_err, dict):
-                        api_msg = first_err.get("message") or ""
+                        # Caso errores anidados dentro de errors[0]['errors']
+                        sub_errors = first_err.get("errors", [])
+                        if isinstance(sub_errors, list) and len(sub_errors) > 0:
+                            sub_msg_list = [e.get("errorMessage", "") for e in sub_errors if isinstance(e, dict) and e.get("errorMessage")]
+                            if sub_msg_list:
+                                api_msg = "\n".join(sub_msg_list)
+
+                        if not api_msg:
+                            api_msg = first_err.get("message") or ""
 
                 if not api_msg:
                     api_msg = res_json.get("message") or response.text or f"Respuesta HTTP {http_status}"
@@ -201,7 +206,7 @@ class RetentionVatIslr(models.Model):
                     rec.information = json.dumps(res_json, indent=2, ensure_ascii=False)
                     rec.errorMessage = str(api_msg)
 
-                # 5. Respuesta a la UI de Odoo
+                # 5. Respuesta e interacción con la UI de Odoo
                 if http_status in (200, 201) and not res_json.get("hasErrors"):
                     if hasattr(rec, 'state') and rec.state == 'draft' and hasattr(rec, 'action_post'):
                         rec.action_post()
