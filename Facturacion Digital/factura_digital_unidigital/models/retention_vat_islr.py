@@ -39,11 +39,21 @@ class RetentionVatIslr(models.Model):
         code_rif = raw_vat[0] if raw_vat[0].isalpha() else 'J'
         number_rif = raw_vat[1:] if raw_vat[0].isalpha() else raw_vat
 
-        # 2. Fecha de emisión en formato UTC ISO 8601
+        # 2. Dirección limpia (evitar solo espacios en blanco)
+        raw_address = False
+        if hasattr(self, 'get_address_partner'):
+            raw_address = self.get_address_partner()
+        if not raw_address:
+            raw_address = partner.street or partner.contact_address or ""
+
+        clean_address = str(raw_address).strip()
+        final_address = clean_address if clean_address else "Caracas, Venezuela"
+
+        # 3. Fecha de emisión en formato UTC ISO 8601
         target_date = self.date_isrl or fields.Date.today()
         emission_dt = datetime.combine(target_date, datetime.min.time()).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-        # 3. Líneas de ISLR
+        # 4. Líneas de ISLR
         islr_lines = []
         for line in self.lines_id:
             concept_code = str(line.code or '001').zfill(3)
@@ -57,7 +67,7 @@ class RetentionVatIslr(models.Model):
                 "Extra": {}
             })
 
-        # 4. Mapeo de documento retenido
+        # 5. Mapeo de documento retenido
         inv_date = invoice.invoice_date.strftime('%d/%m/%Y') if invoice.invoice_date else target_date.strftime('%d/%m/%Y')
         inv_number = invoice.name or self.invoice_number or "00000001"
         ctrl_number = getattr(invoice, 'nro_control', False) or getattr(invoice, 'l10n_ve_control_number', False) or "00-00000001"
@@ -95,7 +105,7 @@ class RetentionVatIslr(models.Model):
             "Name": partner.name or "",
             "FiscalRegistryCode": code_rif,
             "FiscalRegistry": number_rif,
-            "Address": self.get_address_partner() or partner.street or "Caracas, Venezuela",
+            "Address": final_address,
             "Phone": partner.phone or partner.mobile or "02120000000",
             "EmailTo": partner.email or "comprobantes@dominio.com",
             "PerceiverType": "PJ-DOMICILIADA",
@@ -113,7 +123,7 @@ class RetentionVatIslr(models.Model):
             company = rec.company_id or self.env.company
             url = getattr(company, 'unidigital_retention_url', False) or 'https://qa.unidigital.global/digitalinvoice-core/documents/createretention'
 
-            # 1. Obtener y refrescar el Token usando la misma lógica de IVA
+            # 1. Obtener y refrescar el Token
             token = getattr(company, 'unidg_jwt_token', False)
             if not token and hasattr(company, 'unidg_get_token'):
                 company.unidg_get_token()
@@ -151,7 +161,7 @@ class RetentionVatIslr(models.Model):
                 rec.hasErrors = str(res_json.get("hasErrors", http_status not in (200, 201)))
                 rec.result = json.dumps(res_json.get("result")) if res_json.get("result") is not None else str(res_json.get("result", ""))
 
-                # 4. Extracción del mensaje exacto desde la API
+                # 4. Extracción de mensajes y errores
                 api_msg = ""
                 errors_data = res_json.get("errors", [])
 
@@ -163,10 +173,8 @@ class RetentionVatIslr(models.Model):
                 if not api_msg:
                     api_msg = res_json.get("message") or response.text or f"Respuesta HTTP {http_status}"
 
-                # Asignación al campo Mensaje del API
                 rec.message = str(api_msg)
 
-                # Guardar detalle en information y errorMessage
                 if errors_data:
                     rec.information = json.dumps(errors_data, indent=2, ensure_ascii=False)
                     rec.errorMessage = str(api_msg)
@@ -174,7 +182,7 @@ class RetentionVatIslr(models.Model):
                     rec.information = json.dumps(res_json, indent=2, ensure_ascii=False)
                     rec.errorMessage = str(api_msg)
 
-                # 5. Respuesta e interacción con la UI de Odoo
+                # 5. Respuesta a la UI de Odoo
                 if http_status in (200, 201) and not res_json.get("hasErrors"):
                     if hasattr(rec, 'state') and rec.state == 'draft' and hasattr(rec, 'action_post'):
                         rec.action_post()
