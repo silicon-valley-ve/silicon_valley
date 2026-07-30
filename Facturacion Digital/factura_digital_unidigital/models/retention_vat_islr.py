@@ -49,11 +49,30 @@ class RetentionVatIslr(models.Model):
         clean_address = str(raw_address).strip()
         final_address = clean_address if clean_address else "Caracas, Venezuela"
 
-        # 3. Fecha de emisión en formato UTC ISO 8601
+        # 3. Limpieza estricta de Teléfono (solo dígitos numéricos)
+        raw_phone = partner.phone or partner.mobile or "02120000000"
+        clean_phone = ''.join(filter(str.isdigit, str(raw_phone)))
+        final_phone = clean_phone if len(clean_phone) >= 7 else "02120000000"
+
+        # 4. Mapeo dinámico de Tipo de Persona (PerceiverType)
+        # Intenta tomar el código del campo people_type de Odoo localización o usa valor por defecto
+        perceiver_type = "PJ-DOMICILIADA"
+        if hasattr(partner, 'people_type') and partner.people_type:
+            pt_code = str(partner.people_type).upper()
+            if 'PNRE' in pt_code or 'PN_RESIDENTE' in pt_code:
+                perceiver_type = "PN-RESIDENTE"
+            elif 'PJDO' in pt_code or 'PJ_DOMICILIADA' in pt_code:
+                perceiver_type = "PJ-DOMICILIADA"
+            elif 'PNDO' in pt_code or 'PN_NO_RESIDENTE' in pt_code:
+                perceiver_type = "PN-NO-RESIDENTE"
+            elif 'PJND' in pt_code or 'PJ_NO_DOMICILIADA' in pt_code:
+                perceiver_type = "PJ-NO-DOMICILIADA"
+
+        # 5. Fecha de emisión en formato UTC ISO 8601
         target_date = self.date_isrl or fields.Date.today()
         emission_dt = datetime.combine(target_date, datetime.min.time()).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-        # 4. Líneas de ISLR
+        # 6. Líneas de ISLR
         islr_lines = []
         for line in self.lines_id:
             concept_code = str(line.code or '001').zfill(3)
@@ -67,7 +86,7 @@ class RetentionVatIslr(models.Model):
                 "Extra": {}
             })
 
-        # 5. Mapeo de documento retenido
+        # 7. Mapeo de documento retenido
         inv_date = invoice.invoice_date.strftime('%d/%m/%Y') if invoice.invoice_date else target_date.strftime('%d/%m/%Y')
         inv_number = invoice.name or self.invoice_number or "00000001"
         ctrl_number = getattr(invoice, 'nro_control', False) or getattr(invoice, 'l10n_ve_control_number', False) or "00-00000001"
@@ -106,9 +125,9 @@ class RetentionVatIslr(models.Model):
             "FiscalRegistryCode": code_rif,
             "FiscalRegistry": number_rif,
             "Address": final_address,
-            "Phone": partner.phone or partner.mobile or "02120000000",
+            "Phone": final_phone,
             "EmailTo": partner.email or "comprobantes@dominio.com",
-            "PerceiverType": "PJ-DOMICILIADA",
+            "PerceiverType": perceiver_type,
             "TaxBase": round(self.amount_untaxed, 2),
             "TaxAmount": 0.0,
             "TotalIGTF": 0,
