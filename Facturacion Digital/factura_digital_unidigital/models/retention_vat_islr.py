@@ -29,12 +29,29 @@ class RetentionVatIslr(models.Model):
             invoice = rec.invoice_id
 
             if not invoice:
-                raise UserError(_("El comprobante de retención no tiene una factura asociada."))
+                rec.message = "Error: El comprobante no tiene una factura asociada."
+                rec.hasErrors = "True"
+                continue
 
-            # 1. Obtener Token de Autenticación mediante la función de res.company
-            token = company.unidg_get_token() if hasattr(company, 'unidg_get_token') else False
+            # 1. Obtener Token de Autenticación de la compañía
+            token = False
+            try:
+                if hasattr(company, 'unidg_get_token'):
+                    token_res = company.unidg_get_token()
+                    # Manejar si devuelve un diccionario {'token': '...'} o directamente el string
+                    if isinstance(token_res, dict):
+                        token = token_res.get('token') or token_res.get('access_token')
+                    else:
+                        token = token_res
+            except Exception as e_tok:
+                _logger.error("Error ejecutando unidg_get_token(): %s", str(e_tok))
+
             if not token:
-                raise UserError(_("No se pudo obtener el token de autenticación de Unidigital. Verifique las credenciales de la compañía."))
+                rec.message = "Error al obtener Token de Unidigital"
+                rec.errorMessage = "No se pudo obtener el token de autenticación desde res.company. Verifique los logs o la configuración del módulo."
+                rec.hasErrors = "True"
+                rec.code = "401"
+                continue
 
             # 2. Mapeo de RIF del Proveedor / Cliente
             raw_vat = (partner.vat or '').replace('-', '').strip()
