@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="pos_dual_currency.PaymentScreenPaymentLines" t-inherit="point_of_sale.PaymentScreenPaymentLines" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('payment-amount')][1]/t[1]" position="after">
+            <t t-if="pos.config.dual_currency">
+                <span class="px-2 text-dark">/</span>
+                <span t-esc="LineAmountDual(line)" class="second-currency-text"/>
+            </t>
+        </xpath>
+        <xpath expr="//div[@t-att-class='unselectedLineClass(line)']/div/div/t[1]" position="after">
+            <t t-if="pos.config.dual_currency">
+                <span class="px-2 text-dark">/</span>
+                <span t-esc="LineAmountDual(line)" class="second-currency-text"/>
+             </t>
+        </xpath>
+    </t>
+</templates>

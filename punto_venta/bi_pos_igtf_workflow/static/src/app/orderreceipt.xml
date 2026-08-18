@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="pos_service_charge_template" inherit_id="point_of_sale.template" xml:space="preserve">
+	
+	<t t-name="OrderReceipt_Service" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension" owl="1">
+		<xpath expr="//div[hasclass('pos-receipt-amount')]" position="replace">
+		<t t-if = "env.services.pos.config.igtf_tax">			
+	            <div class="pos-receipt-amount">
+	            	<t t-if="igtf_amount">
+		                Impuesto IGTF 
+		                <span class="pos-receipt-right-align" t-esc="env.utils.formatCurrency(igtf_amount)" />
+		                <div class="pos-receipt-amount">
+				            TOTAL
+				            <span t-esc="props.formatCurrency(props.data.amount_total)" class="pos-receipt-right-align"/>
+				        </div>
+		            </t>
+		            <t t-else="">
+						<div class="pos-receipt-amount">
+			                TOTAL
+			                <span t-esc="props.formatCurrency(props.data.amount_total)" class="pos-receipt-right-align"/>
+			            </div>
+					</t>
+	            </div>
+	            <br/>    
+	    </t>
+			
+		</xpath>
+	</t>
+</templates>
+
+

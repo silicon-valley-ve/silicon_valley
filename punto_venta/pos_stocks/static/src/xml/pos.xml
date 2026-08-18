@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (c) 2016-Present Webkul Software Pvt. Ltd. (<https://webkul.com/>) -->
+<!-- See LICENSE file for full copyright and licensing details. -->
+<!-- License URL : <https://store.webkul.com/license.html/> -->
+<templates id="template" xml:space="preserve">
+    <t t-name="ProductCard" t-inherit="point_of_sale.ProductCard" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('product-content')]" position="before">
+            <t t-set="product" t-value="props.product"/>
+            <t t-if="this.env.services.pos.config.wk_display_stock and product.type == 'consu'">
+                <t t-if="product.wk_total_qty_arr?.length">
+                    <t t-if="product.wk_total_qty_arr?.find(n=>n>0)">
+                        <span class="qty-tag-multiple"  t-att-id="'qty-tag'+product.id">
+                            <t t-foreach="product.wk_total_qty_arr" t-as="nbr" t-key="nbr_index">
+                                <span t-attf-style="background: {{nbr>=0?nbr==0?'grey':'green':'red'}};
+                                        padding: 6px 10px;
+                                        border-radius: 5px;
+                                        margin-left: 5px;">
+                                    <t t-esc="nbr"/>
+                                </span>
+                                <t t-if="product.dot_dot and nbr_index>=2">
+                                    <span style="
+                                        position: absolute;
+                                        width: auto;
+                                        margin-left: 5px;
+                                        align-content: center;
+                                        color: black;
+                                        font-size: 20px;
+                                        font-weight: bold;
+                                    ">...</span>
+                                </t>
+                            </t>
+                        </span>
+                        
+                    </t>
+                    
+                    <t t-else="">
+                        <t t-foreach="product.wk_total_qty_arr" t-as="nbr" t-key="nbr_index">
+                        <span class="qty-tag" style="background: red;" t-att-id="'qty-tag'+product.id">
+                                <t t-esc="nbr"/>
+                            </span>
+                        </t>
+                    </t>
+                </t>
+                <t t-else="">
+                    <t t-if="product.wk_qty_available > 0">
+                        <span class="qty-tag" style="background: green;" t-att-id="'qty-tag'+product.id">
+                            <t t-esc="product.wk_qty_available"/>
+                        </span>
+                    </t>
+                    <t t-elif="product.wk_qty_available == 0">
+                        <span class="qty-tag" style="background: gray;" t-att-id="'qty-tag'+product.id">
+                            <t t-esc="product.wk_qty_available"/>
+                        </span>
+                    </t>
+                    <t t-else="">
+                        <span class="qty-tag" style="background: red;" t-att-id="'qty-tag'+product.id">
+                            <t t-esc="product.wk_qty_available"/>
+                        </span>
+                    </t>
+                </t>
+            </t>
+        </xpath>
+    </t>
+    <!-- <t t-name="ProductsWidget" t-inherit="point_of_sale.ProductsWidget" t-inherit-mode="extension" owl="1">
+        <xpath expr="//ProductCard" position="attributes">
+            <attribute name="product">product</attribute>           
+        </xpath>
+    </t>
+    <t t-name="ComboConfiguratorPopup" t-inherit="point_of_sale.ComboConfiguratorPopup" t-inherit-mode="extension" owl="1">
+        <xpath expr="//ProductCard" position="attributes">
+            <attribute name="product">product</attribute>   
+        </xpath>
+    </t>
+    <t t-name="ComboConfiguratorPopup" t-inherit="point_of_sale.ComboConfiguratorPopup" t-inherit-mode="extension" owl="1">
+        <xpath expr="//label" position="attributes">
+            <attribute name="t-if">!pos.config.wk_hide_out_of_stock || pos.config.wk_hide_out_of_stock &amp;&amp; ( product.wk_qty_available > 0 || product.detailed_type != 'product')</attribute>           
+        </xpath>
+    </t> -->
+    <t t-name="pos_stocks.OutOfStockMessagePopup">
+        <Dialog size="'md'" title="props.title">
+            <div>
+                <t t-esc="  props.body || '' " />
+            </div>
+
+            <t t-set-slot="footer">
+                
+                <button class="backend-button cancel button btn btn-lg btn-secondary"
+                    t-on-click="props.close">
+                    OK
+                </button>
+            </t>
+        </Dialog>
+    </t>
+</templates>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--To add the customer details in the settings page-->
+<templates id="template" xml:space="preserve">
+  <t t-name="CustomOrderReceipt" t-inherit="point_of_sale.ReceiptScreen" t-inherit-mode="extension" owl="1">
+    
+        <xpath expr="//div[contains(@class, 'receipt-options')]//button[contains(@class, 'print')]" position="replace">
+          <div class="d-flex flex-column">
+            <!--button class="button print btn btn-lg btn-secondary" t-on-click="() => this.ImprimirFiscal_the_factory()">
+                ****************** Imprimir Factura HK. ******************
+            </button-->
+             <button class="button print btn btn-lg btn-secondary w-100 py-3" t-on-click="() => doFullPrint.call()">
+                <i t-attf-class="fa {{doFullPrint.status === 'loading' ? 'fa-fw fa-spin fa-circle-o-notch' : 'fa-print'}} me-1" />Enviar Comanda
+              </button>
+              <br/>
+            <button class="button print btn btn-lg btn-secondary" t-on-click="() => this.ImprimirFiscal_the_factory()">
+                ****************** Imprimir Factura Fiscal. ******************
+            </button> 
+          </div>
+        </xpath>
+  </t>
+
+  <t t-name="PaymentScreenMethodsCustom" t-inherit="point_of_sale.PaymentScreenMethods" t-inherit-mode="extension"
+       owl="1">
+        <xpath expr="//t[@t-name='point_of_sale.PaymentScreenMethods']//span[@class='payment-name']" position="after">
+            <t t-if="paymentMethod.is_currency_payment">
+               <span class="badge badge-info">Pago en Divisas</span>
+           </t>
+        </xpath>
+  </t>
+  
+</templates>

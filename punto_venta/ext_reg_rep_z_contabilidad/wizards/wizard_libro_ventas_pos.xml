@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        
+        <record id="pos_wizard_libro_ventas_pos" model="ir.ui.view">
+            <field name="name">Asistente para Libro pos</field>
+            <field name="model">pos.wizard.libro.ventas</field>
+            <field name="arch" type="xml">
+                 <form string="Libro Ventas Pos">
+                   
+                        <group>
+                            <field name="date_from" string="Fecha Inicio" required="1"/>
+                            <field name="date_to"  string="Fecha Fin" required="1"/>
+                        </group>
+                        <group>
+                            <field name="name" colspan="4" invisible="1"/>
+                            <field name="report" filename="name" colspan="4" invisible="0"/>
+                            <field name="state" colspan="4" invisible="1"/>
+                            <field name="line" colspan="4" invisible="1"/>
+                        </group>
+                    
+                    
+                    <footer>
+                        <button name="generate_xls_report" string="Exportar Excel" type="object" class="btn-primary" />
+                        <!--button name="print_libro_pos" string="Exportar PDF" type="object" class="btn-primary" /-->
+                        <button special="cancel" string="Cancel" class="btn-secondary" />
+                    </footer>
+                </form>
+            </field>
+        </record>
+        
+        <record id="action_account_common_menu_libro_ventas_pos" model="ir.actions.act_window">
+            <field name="name">Libro Ventas Pos</field>
+            <field name="res_model">pos.wizard.libro.ventas</field>
+            <field name="view_mode">form</field>
+            <!--field name="view_id" ref="pos_wizard_libro_ventas"/-->
+            <field name="target">new</field>
+        </record>
+
+        <!--menuitem 
+            name="Libro Ventas Pos" 
+            parent="point_of_sale.menu_point_rep"
+            id="ext_extension_tpdv.libro_ventas_pos"
+            sequence="5"
+            action="action_account_common_menu_libro_ventas_pos"/-->
+
+        <menuitem 
+            name="Libro Ventas Pos" 
+            parent="account.menu_finance_reports"
+            id="ext_reg_rep_z_contabilidad.libro_ventas_pos2"
+            sequence="7"
+            action="action_account_common_menu_libro_ventas_pos"/>
+    </data>
+</odoo>

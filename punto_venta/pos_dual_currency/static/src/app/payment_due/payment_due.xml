@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+     <t t-name="pos_dual_currency.PaymentScreenDue" t-inherit="point_of_sale.PaymentScreenDue"
+        t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('total')]" position="inside">
+            <t t-if="pos.config.dual_currency">
+                / <span t-esc="getCurrencyDual(currentOrder.getTotalDue())"
+                        class="total second-currency-text"/>
+            </t>
+        </xpath>
+    </t>
+</templates>

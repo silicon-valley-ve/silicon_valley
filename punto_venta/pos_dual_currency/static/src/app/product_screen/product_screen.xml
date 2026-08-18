@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="pos_dual_currency.ProductScreen" t-inherit="point_of_sale.ProductScreen" t-inherit-mode="extension">
+        <xpath expr="//OrderSummary" position="after">
+            <t t-if="pos.config.dual_currency">
+                <div t-if="env.utils.formatCurrency(currentOrder.get_total_with_tax())" class="order-summary w-100 py-2 px-3 bg-100 text-end fw-bolder fs-2 lh-sm">
+                    Total:
+                    <span t-esc="getCurrencyDual(currentOrder.get_total_with_tax())" class="total second-currency-text"/>
+                    <div t-if="!env.utils.floatIsZero(currentOrder.get_total_tax()) and env.utils.formatCurrency(currentOrder.get_total_tax()) or ''" class="fs-6 text-muted subentry">
+                        Taxes:
+                        <span t-esc="!env.utils.floatIsZero(currentOrder.get_total_tax()) and getCurrencyDual(currentOrder.get_total_tax()) or ''"
+                              class="tax second-currency-text"/>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+    </t>
+</templates>

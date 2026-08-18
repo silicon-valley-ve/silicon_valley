@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="pos_dual_currency.ProductCard" t-inherit="point_of_sale.PaymentScreenStatus" t-inherit-mode="extension">
+        <xpath expr="//t[@t-esc='remainingText']" position="after">
+            <t t-if="pos.config.dual_currency">
+                <span class="px-2 text-dark">/</span>
+                <span t-esc="remTextDual" class="second-currency-text"/>
+            </t>
+        </xpath>
+        <xpath expr="//t[@t-esc='changeText']" position="after">
+            <t t-if="pos.config.dual_currency">
+                <span class="px-2 text-dark">/</span>
+                <span t-esc="TextDual" class="second-currency-text"/>
+            </t>
+        </xpath>
+    </t>
+</templates>

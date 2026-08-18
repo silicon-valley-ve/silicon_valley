@@ -1,0 +1,62 @@
+<odoo>
+  <record id="view_fiscal_form" model="ir.ui.view">
+        <field name="name">view.fiscal.form</field>
+        <field name="model">pos.nro.maquina</field>
+        <field name="arch" type="xml">
+            <form string="Nro Maquina Fiscal">
+               
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <!--field name="priority" widget="priority" class="mr-3" attrs="{'invisible': [('name','=','/')]}"/-->
+                                <field name="name" placeholder="Nro Maquina"/>
+                        </h1>
+                    </div>
+                    <group name="central" string="Base">
+                        <group name="g01">
+                            <field name="company_id" string="Compañia" required="1"/>
+                            
+                        </group>
+                        <group name="g02">
+                            
+                        </group>
+                    </group>
+                   
+                    
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+
+
+  <record id="view_fiscal_tree" model="ir.ui.view">
+        <field name="name">view.fiscal.tree</field>
+        <field name="model">pos.nro.maquina</field>
+        <field name="arch" type="xml">
+            <list string="Registro Nro Maquina fiscales">
+                <field name="id"/>
+                <!--field name="session_id" /-->
+                <field name="name" string="Nro de maquina"/>
+                <field name="company_id" string="Compañia" required="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="nb_fiscal_action" model="ir.actions.act_window">
+        <field name="name">Nro Maquina Fiscales</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model" >pos.nro.maquina</field>
+        <!--field name="view_mode">kanban,tree,form,activity</field-->
+        <field name="view_mode">list,form</field>
+         <field name="view_id" ref="view_fiscal_tree"></field>
+    </record>
+
+  <menuitem
+    id="menu_nro_maquina_pos"
+    parent="account.menu_finance_receivables"
+    name="Nro de Maq. Fiscales"
+    action="nb_fiscal_action"
+    sequence="19"
+    />
+</odoo>

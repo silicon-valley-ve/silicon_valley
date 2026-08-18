@@ -1,0 +1,121 @@
+<odoo>
+  <record id="view_res_solicitud_form" model="ir.ui.view">
+        <field name="name">view.libro.pos.form</field>
+        <field name="model">pos.order.line.resumen</field>
+        <field name="arch" type="xml">
+            <form string="Reportes Z">
+                <header>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,posted"/>
+                    <button name="publicar" string="Publicar" type="object" class="oe_highlight" invisible="state!='draft'"/> 
+                    <button name="boton_draft" string="Borrador" type="object" invisible="state!='posted'"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <!--field name="priority" widget="priority" class="mr-3" attrs="{'invisible': [('name','=','/')]}"/-->
+                                <field name="nro_rep_z" readonly="state!='draft'" placeholder="Nro Reporte Z"/>
+                        </h1>
+                    </div>
+                    <group name="central" string="Base">
+                        <group name="g01">
+                            <field name="fecha_fact" string="Fecha de emisión" readonly="state!='draft'"/>
+                            <field name="reg_maquina_id" string="Nro maquina fiscal (Seleccionable)" required="1" readonly="state!='draft'" domain="[('company_id', '=', company_id)]" />
+                            <field name="reg_maquina" string="Nro maquina fiscal" readonly="state!='draft'" required="1"/>
+                        </group>
+                        <group name="g02">
+                            <field name="journal_id" string="Diario" readonly="state!='draft'"/>
+                            <field name="company_id" string="Compañia" readonly="1"/>
+                            <field name="asiento_id" string="Asiento Contable" invisible="state=='draft'" readonly="state=='posted'"/>
+                        </group>
+                    </group>
+                    <group name="principal" string="Ventas">
+                        <group name="g1">
+                            
+                            <field name="nro_doc" string="Rango de Facturas" placeholder="Ejmp: Desde 45 Hasta 56" readonly="state!='draft'"/>
+
+                            <field name="total_exento" string="Exento" readonly="state!='draft'"/>
+                            <field name="base_general" string="B. Imponible G (16%)" readonly="state!='draft'"/>
+                            <field name="base_reducida" string="B. Imponible R (8%)" readonly="state!='draft'"/>
+                            <field name="base_adicional" string="B. Imponible A (31%)" readonly="state!='draft'"/>
+                            <field name="total_igtf" string="IGTF Ventas" readonly="state!='draft'"/>
+                            
+
+                        </group>
+                        <group name="g2">
+                            
+                            <field name="alicuota_general" string="Alicuota G (16%)" readonly="state!='draft'"/>
+                            <field name="alicuota_reducida" string="Alicuota R (8%)" readonly="state!='draft'"/>
+                            <field name="alicuota_adicional" string="Alicuota A (31%)" readonly="state!='draft'"/>
+
+                            <field name="sub_total_ventas" string="Sub. Total Ventas" readonly="state!='draft'"/>
+                            <field name="total_con_iva" string="Total Ventas" readonly="state!='draft'"/>
+
+
+                        </group>
+                    </group>
+
+                    <group name="nota_credit" string="Notas de Créditos">
+                        <group name="g21">
+                            <field name="nro_doc_nc" string="Rango de Notas de Céditos" placeholder="Ejmp: Desde 5 Hasta 6" readonly="state!='draft'"/>
+                            <field name="total_exento_nc" string="Exento" readonly="state!='draft'"/>
+                            <field name="base_general_nc" string="B. Imponible G (16%)" readonly="state!='draft'"/>
+                            <field name="base_reducida_nc" string="B. Imponible R (8%)" readonly="state!='draft'"/>
+                            <field name="base_adicional_nc" string="B. Imponible A (31%)" readonly="state!='draft'"/>
+                            <field name="total_igtf_nc" string="IGTF Ventas" readonly="state!='draft'"/>
+
+                        </group>
+                        <group name="g22">
+                            <field name="alicuota_general_nc" string="Alicuota G (16%)" readonly="state!='draft'"/>
+                            <field name="alicuota_reducida_nc" string="Alicuota R (8%)" readonly="state!='draft'"/>
+                            <field name="alicuota_adicional_nc" string="Alicuota A (31%)" readonly="state!='draft'"/>
+
+                            <field name="sub_total_ventas_nc" string="Sub. Total Nota Crédito" readonly="state!='draft'"/>
+                            <field name="total_con_iva_nc" string="Total Nota Crédito" readonly="state!='draft'"/>
+                           
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+
+
+  <record id="view_libro_pos_tree" model="ir.ui.view">
+        <field name="name">view.libro.pos.tree</field>
+        <field name="model">pos.order.line.resumen</field>
+        <field name="arch" type="xml">
+            <list string="Resumen ventas pos">
+                <field name="id"/>
+                <!--field name="session_id" /-->
+                <field name="nro_rep_z" string="Número Reporte Z"/>
+                <field name="reg_maquina" string="Nro maquina fiscal"/>
+                <field name="fecha_fact" string="Fecha de emisión"/>
+                <field name="nro_doc" string="Rango"/>
+                 <field name="journal_id" string="Diario"/>
+                <field name="total_con_iva" string="Total con IVA" sum="total_con_iva"/>
+                 <field name="company_id" string="Empresa/Cliente"/>
+                <field name="state" string="Status"  widget="badge" decoration-success="state == 'posted'"  decoration-info="state == 'draft'"/>
+
+               
+            </list>
+        </field>
+    </record>
+
+    <record id="resumen_libro_action" model="ir.actions.act_window">
+        <field name="name">Resumen libro pos</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model" >pos.order.line.resumen</field>
+        <!--field name="view_mode">kanban,tree,form,activity</field-->
+        <field name="view_mode">list,form</field>
+         <field name="view_id" ref="view_libro_pos_tree"></field>
+    </record>
+
+  <menuitem
+    id="menu_vista_tabla_libro_pos"
+    parent="account.menu_finance_receivables"
+    name="Registro Reportes Z"
+    action="resumen_libro_action"
+    sequence="20"
+    />
+</odoo>

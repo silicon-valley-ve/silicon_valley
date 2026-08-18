@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="pos_dual_currency.ReceiptScreen" t-inherit="point_of_sale.ReceiptScreen" t-inherit-mode="extension">
+        <xpath expr="//span[hasclass('edit-order-payment')]" position="before">
+            <t t-if="pos.config.dual_currency">
+                <span class="px-2 text-dark">/</span>
+                <span t-esc="orderAmountDual" class="second-currency-text"/>
+            </t>
+        </xpath>
+    </t>
+</templates>

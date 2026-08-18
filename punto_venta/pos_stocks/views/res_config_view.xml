@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (c) 2016-Present Webkul Software Pvt. Ltd. (<https://webkul.com/>) -->
+<!-- See LICENSE file for full copyright and licensing details. -->
+<!-- License URL : <https://store.webkul.com/license.html/> -->
+<odoo>
+    <record id="res_config_settings_view_form_pos_stocks" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.pos_stocks</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@id='pos_inventory_section']" position="inside">
+                <setting id='pos_stocks' help="Mostrar información de stock del producto en el punto de venta">
+                    <field name="pos_wk_display_stock"/>
+                    <div class="content-group" invisible="not pos_wk_display_stock">
+                        <div class="mt16">
+                            <label string="Ocultar productos fuera de stock" for="pos_wk_hide_out_of_stock" class="col-md-5 o_light_label"/>
+                            <field name="pos_wk_hide_out_of_stock"/>
+                        </div>
+                        <div class="mt16">
+                            <label string="Tipo de Acción" for="pos_wk_stock_type" class="col-md-5 o_light_label"/>
+                            <field name="pos_wk_stock_type"/>
+                        </div>
+                        <div class="mt16">
+                            <label string="Permitir realizar pedidos cuando no haya existencias" for="pos_wk_continous_sale" class="col-md-5 o_light_label"/>
+                            <field name="pos_wk_continous_sale"/>
+                        </div>
+                        <div class="mt16" invisible="pos_wk_continous_sale">
+                            <label string="Mensaje Personalizado" for="pos_wk_error_msg" class="col-md-5 o_light_label"/>
+                            <field name="pos_wk_error_msg"/>
+                        </div>
+                        <div class="mt16" invisible="pos_wk_continous_sale">
+                            <label string="Denegar pedido cuando el stock del producto sea igual a" for="pos_wk_deny_val" class="col-md-5 o_light_label"/>
+                            <field name="pos_wk_deny_val"/>
+                        </div>
+                    </div>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+</odoo>

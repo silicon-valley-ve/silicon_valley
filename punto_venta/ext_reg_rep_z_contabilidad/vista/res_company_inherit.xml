@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="cuentas_prove_clie" model="ir.ui.view">
+        <field name="name">cuentas.prove.clie</field>
+        <field name="model">res.company</field>
+        <field name="inherit_id" ref="base.view_company_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form[1]/sheet[1]/notebook[1]" position="inside">
+                <page string="Config. Ctas Registro Reportes Z" name="reg_rep_z">
+                  <group name="central_z">
+                    <group name="central_z_left" string="Configuracion registro manual Reporte Z ">
+                        <field name="crear_asiento_pos" string="Crear Asiento por el post"/>
+                    </group>
+                    <group name="central_z_right">
+                        <field name="account_receivable_z_id" string="Cta por pagar" invisible="crear_asiento_pos==True"/>
+                        <field name="account_igtf_z_id" string="Cta Ventas IGTF" invisible="crear_asiento_pos==True"/>
+                        <field name="account_ingreso_merca_id" string="Cta de Ingresos" invisible="crear_asiento_pos==True"/>
+                    </group>
+                  </group>
+                </page>
+            </xpath>
+            
+            
+        </field>
+    </record>
+</odoo>

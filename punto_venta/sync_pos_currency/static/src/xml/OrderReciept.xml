@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+         <xpath expr="//div[@class='after-footer']" position="after">
+             <t t-set="paymentlines" t-value="props.data.paymentlines"/>
+             <t t-foreach="paymentlines" t-as="line" t-key="line.id or paymentlines.indexOf(line)">
+                <div>
+                    <t t-if="env.services.pos.config.multi_currency_payment and line.currency_amount_total and line.selected_currency and env.services.pos.currency.name !== line.selected_currency">
+                        <t t-esc="line.name"/>
+                        <t t-set="currency_symbol_with_name"
+                            t-value="'(' + env.services.pos.currency.name + ' ' + env.services.pos.currency.symbol + ')'"/>
+                        <span t-esc="currency_symbol_with_name" style="margin-left:30%;"/>--
+                        <span t-esc="props.formatCurrency(line.amount)"
+                               class="pos-receipt-right-align"/>
+                    </t>
+                </div>
+                <div>
+                    <t t-esc="line.name"/>
+                    <t t-if="env.services.pos.config.multi_currency_payment and line.currency_amount_total">
+                                <t t-set="currency_symbol_with_name"
+                                    t-value="'(' + line.selected_currency_symbol + ')'"/>
+                        <span t-esc="currency_symbol_with_name" style="margin-left:30%;"/>
+                        <t t-set="selected_currency_symbol_amount"
+                                    t-value="'(' + line.selected_currency_symbol + ' ' + line.currency_amount_total + ')'"/>
+                        <span t-esc="selected_currency_symbol_amount"
+                              class="pos-receipt-right-align"/>
+                     </t>
+                    <t t-elif="env.services.pos.config.multi_currency_payment">
+                                 <t t-set="currency_symbol_with_name"
+                                    t-value="'(' + env.services.pos.currency.name + ' ' + env.services.pos.currency.symbol + ')'"/>
+                        <span t-esc="currency_symbol_with_name" style="margin-left:30%;"/>
+                        <!-- props.formatCurrency(env.services.pos.currency) -->
+                        <span t-esc="props.formatCurrency(line.amount, env.services.pos.currency)"
+                              class="pos-line-right-align"/>
+                             </t>
+                    <br></br>
+                    <t t-if="line.rounded_currency_rate > 0">
+                                  Exchange Rate
+                                  <t t-set="currency_symbol_with_name"
+                                     t-value="env.services.pos.currency.symbol"/>
+                        <t t-set="rounded_currency_value"
+                           t-value="''+ line.rounded_currency_rate +  ' ' + line.selected_currency_symbol + ''"/>
+                        <span t-esc="'' + 1 + ' ' + currency_symbol_with_name + ''" style="margin-left:7%;"/>
+                        x
+                        <span t-esc="rounded_currency_value"/>
+                    </t>
+                </div>
+            </t>
+            <hr/>
+         </xpath>
+     </t>
+
+</templates>

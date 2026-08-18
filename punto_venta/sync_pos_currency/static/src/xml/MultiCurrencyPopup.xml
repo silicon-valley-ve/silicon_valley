@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="sync_pos_currency.MultiCurrencyPopup" owl="1">
+        <Dialog bodyClass="'currency-selection overflow-y-auto'">
+            <t t-set-slot="header">
+                Pago en varias divisas
+            </t>
+            <table class="table table-borderless">
+                <tbody>
+                    <tr>
+                        <td style="font-weight: bold; width: 20%;">Selecciona Moneda: </td>
+                        <td style="width: 40%;">
+                            <select t-if="state.values and state.values.length > 0" 
+                                    class="oe_currency_selection" 
+                                    t-on-change="onCurrencyChange">
+                                <option t-foreach="state.values" t-as="curr" t-key="curr.id" t-att-value="curr.id">
+                                    <t t-esc="curr.name + ' (' + curr.symbol + ')'"/>
+                                </option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold; width: 20%;">Metodo de Pago: </td>
+                        <td style="width: 40%;">
+                            <select class="payment-method-select" 
+                                    t-att-value="state.selectedPaymentMethodId" 
+                                    t-on-change="onPaymentMethodChange">
+                                <option value="0">-- Seleccione Método --</option>
+                                <t t-foreach="props.payment_method" t-as="method" t-key="method.id">
+                                    <option t-att-value="method.id">
+                                        <t t-esc="method.name"/>
+                                    </option>
+                                </t>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold; width: 20%;">Tasa Directa: </td>
+                        <td>1 <t t-esc="state.default_currency.name"/> = <t t-esc="state.selected_rate"/> <t t-esc="state.selected_curr_name"/></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold; width: 20%;">Tasa Inversa: </td>
+                        <td>1 <t t-esc="state.selected_curr_name"/> = <t t-esc="state.inverse_rate"/> <t t-esc="state.default_currency.name"/></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold; width: 20%;">Total a pagar (<t t-esc="state.symbol"/>): </td>
+                        <td><t t-esc="state.amount_total_currency"/></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold; width: 20%;">Ingrese el monto: </td>
+                        <td>
+                            <input class="form-control pay_amount" type="number" step="0.01" placeholder="0.00"/>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <t t-set-slot="footer">
+                <button class="btn btn-secondary" t-on-click="cancel">Descartar</button>
+                <button class="btn btn-primary" t-on-click="confirm">Confirmar</button>
+            </t>
+        </Dialog>
+    </t>
+</templates>

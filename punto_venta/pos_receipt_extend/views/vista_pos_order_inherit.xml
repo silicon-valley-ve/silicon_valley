@@ -1,0 +1,67 @@
+<odoo>
+  <data>
+     <record id="herencia_vista_pos_order" model="ir.ui.view">
+        <field name="name">vista.pos.order</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_pos_order_invoice']" position="after">     
+                <button name="action_emitir_factura" 
+                    type="object" 
+                    string="Imprimir Factura" 
+                    class="oe_highlight" 
+                    confirm="¿Está seguro emitir una factura de esta orden?" 
+                    invisible="nro_fact_seniat"/>
+            </xpath>
+
+            <xpath expr="//field[@name='name']" position="after">     
+                <field name="nro_nc_seniat" string="Nro NC" invisible="0" readonly="0"/>
+                <field name="nro_fact_seniat" string="Nr Factura" invisible="0" readonly="0"/>
+                <field name="nro_fact_afectada" string="Nro Fact Afectada" invisible="0" readonly="1"/>
+                <!--field name="nb_caja_comp" string="Nombre Caja" invisible="1"/-->
+                <field name="nb_caja" string="Nombre Caja" invisible="1" readonly="1"/>
+            </xpath>
+            
+        </field>
+     </record>   
+
+     <record id="herencia_vista_pos_order_tree" model="ir.ui.view">
+        <field name="name">vista.pos.order.tree</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_order_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">   
+                <field name="nro_fact_seniat" string="Nro Factura" invisible="0"/>
+                <field name="nro_nc_seniat" string="Nro NC" invisible="0"/>
+                <field name="nro_fact_afectada" string="Nro Fact Afectada" invisible="0"/>
+            </xpath>
+            <xpath expr="//field[@name='partner_id']" position="after">  
+                <field name="status_impresora" string="Impreso Fiscal" optional="hide" />
+            </xpath>
+
+            <xpath expr="//field[@name='amount_total']" position="after">  
+                      
+                <field name="url_nota_credito" string="Imprimir Nota Credito" invisible="1" widget="url"/>
+                <field name="link" string="Imprimir Nota Credito" widget="url" invisible="amount_total>0"/>
+
+                <!--button name="abrir_link_externo" 
+                    type="object" 
+                    string="🌐 NC HK" 
+                    class="btn-link"
+                    invisible="amount_total &gt; 0"/-->
+
+                <!--button name="action_emitir_nota_credito" 
+                    type="object" 
+                    string="NC Fiscal" 
+                    class="oe_highlight" 
+                    invisible="amount_total &gt; 0"
+                    confirm="¿Está seguro de que desea enviar esta Nota de Crédito a la impresora fiscal?"/-->
+              
+            </xpath>
+            
+        </field>
+     </record>   
+    	 
+
+  </data>
+</odoo>

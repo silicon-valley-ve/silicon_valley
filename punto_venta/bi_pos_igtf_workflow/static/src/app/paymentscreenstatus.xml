@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="pos_service_charge_template" inherit_id="point_of_sale.template" xml:space="preserve">
+
+	<t t-name="PaymentScreen-Paymentlines" t-inherit="point_of_sale.PaymentScreenStatus" t-inherit-mode="extension" owl="1">
+		<xpath expr="//div[hasclass('payment-status-change')]" position="after">
+            <div class="payment-status-change d-flex justify-content-between flex-grow-1">
+                <span class="label pe-2">Total adeudado con IGTF</span>
+                <span class="amount align-self-end pe-5" t-att-class="{ 'highlight text-success fw-bolder': props.order.get_change() > 0 }">
+                    <t t-esc="toal_amount_igtf" />
+                </span>
+            </div>
+            <div class="payment-status-change d-flex justify-content-between flex-grow-1">
+                <span class="label pe-2">Impuesto IGTF</span>
+                <span class="amount align-self-end pe-5" t-att-class="{ 'highlight text-success fw-bolder': props.order.get_change() > 0 }">
+                    <t t-esc="amount_igtf" />
+                </span>
+            </div>
+			
+		</xpath>
+	</t>
+</templates>
+
+

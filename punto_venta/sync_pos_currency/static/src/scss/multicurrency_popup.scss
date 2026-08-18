@@ -1,0 +1,10 @@
+.modal {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+.modal .modal-content {
+    max-width: 70% !important;
+    margin: 0 auto;
+}
