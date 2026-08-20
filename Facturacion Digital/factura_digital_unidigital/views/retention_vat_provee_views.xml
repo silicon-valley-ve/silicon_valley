@@ -38,8 +38,8 @@
 
 
             <xpath expr="/form//button[@name='comprobante']" position="after">
-                <!--button name="envia_comp_ret_iva" string="Enviar o Sincronizar" type="object" invisible="state!='posted'"/-->
-                <button name="envia_comp_ret_iva" string="Enviar o Sincronizar" type="object" />
+                <button name="envia_comp_ret_iva" string="Enviar o Sincronizar" type="object" invisible="state!='posted'"/>
+                <!--button name="envia_comp_ret_iva" string="Enviar o Sincronizar" type="object" /-->
             </xpath>
 
         </field>
