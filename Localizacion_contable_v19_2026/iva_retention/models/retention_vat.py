@@ -66,6 +66,7 @@ class RetentionVat(models.Model):
         if self.invoice_id.amount_residual!=0:
             self.create_conciliacion_ret_iva()
 
+
     def _compute_rif(self):
     	for record in self:
         	record.rif= record.partner_id.vat if record.partner_id else False
