@@ -42,17 +42,20 @@ class Productos(models.Model):
     def _check_single_tax(self):
         """ Valida que solo haya un impuesto en la lista al guardar. """
         # Odoo salta la validación si se está instalando/configurando la contabilidad o módulos en segundo plano
-        """if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax'):
-            return"""
+        if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax'):
+            return
 
         for record in self:
-            # len(record.taxes_id) cuenta el número de registros en el Many2many
-            if len(record.taxes_id) > 1:
+            company_taxes = {}
+            for tax in record.taxes_id:
+                comp_id = tax.company_id.id if tax.company_id else False
+                company_taxes[comp_id] = company_taxes.get(comp_id, 0) + 1
+                
+            if any(count > 1 for count in company_taxes.values()):
                 # ❌ Lanza un error de validación, que automáticamente revierte (rollback)
                 #    cualquier cambio y previene el commit de datos incorrectos.
-                """raise ValidationError(
-                    _('Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde'))"""
-                self._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde")
+                record._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde")
+
 
     @api.constrains('supplier_taxes_id')
     def _check_single_tax_compras(self):
