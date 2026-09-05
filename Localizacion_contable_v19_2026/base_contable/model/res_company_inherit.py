@@ -25,4 +25,12 @@ class ResCompany(models.Model):
    
     #uni_neg_id = fields.Many2one('stock.unidad.negocio')
 
-    
+    def write(self, vals):
+        # Si el campo no viene explícitamente en la actualización del usuario, 
+        # podemos asegurarnos de que al actualizar la compañía se active (o se mantenga el comportamiento deseado).
+        # Para evitar bucles infinitos, validamos si ya se está actualizando este campo o usamos un contexto de control.
+        if 'validate_multi_tax_product' not in vals and not self.env.context.get('skip_auto_tax_toggle'):
+            # Aquí decides si deseas forzarlo a True en cada actualización o bajo cierta condición
+            vals['validate_multi_tax_product'] = True
+            
+        return super(ResCompany, self.with_context(skip_auto_tax_toggle=True)).write(vals)
