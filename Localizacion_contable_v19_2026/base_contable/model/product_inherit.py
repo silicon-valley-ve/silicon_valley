@@ -42,27 +42,34 @@ class Productos(models.Model):
     @api.constrains('taxes_id')
     def _check_single_tax(self):
         """ Valida que solo haya un impuesto en la lista al guardar. """
-        # Si viene por instalación, asistente de compañía o marca interna de salto, omitimos
-        #if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
-            #return
-        #raise UserError(_("Valor: %s")%self.env.context.get('install_mode'))
-        if not self.env.context.get('install_mode') or not self.env.context.get('skip_check_tax') or not self.env.context.get('create_company'):
-            for record in self:
-                if len(record.taxes_id) > 1:
-                    raise UserError(_("🛑 xx Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde"))
-                    #self._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde")
+        # Si es modo instalación o ya viene marcado para saltar, salimos
+        if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax'):
+            return
+
+        # Detección automática: Si Odoo está ejecutando la creación masiva o la plantilla contable de una compañía
+        # podemos verificar si el entorno viene de la creación de compañía revisando el contexto o la traza ligera.
+        if self.env.context.get('active_model') in ('res.company', 'res.config.settings', 'account.chart.template'):
+            return
+
+        for record in self:
+            if len(record.taxes_id) > 1:
+                self._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde")
 
 
     @api.constrains('supplier_taxes_id')
     def _check_single_tax_compras(self):
         """ Valida que solo haya un impuesto en la lista al guardar. """
-        #if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
-            #return
-        if not self.env.context.get('install_mode') or not self.env.context.get('skip_check_tax') or not self.env.context.get('create_company'):
-            for record in self:
-                if len(record.supplier_taxes_id) > 1:
-                    #record._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de compras a este producto. Deje uno y guarde")
-                    raise UserError(_("🛑 Error de Validación: Solo se puede asignar una alícuota de compras a este producto. Deje uno y guarde"))
+        if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax'):
+            return
+
+        if self.env.context.get('active_model') in ('res.company', 'res.config.settings', 'account.chart.template'):
+            return
+
+        for record in self:
+            if len(record.supplier_taxes_id) > 1:
+                record._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de compras a este producto. Deje uno y guarde")
+
+    
 
 
 
