@@ -1,4 +1,0 @@
-# -*- coding: utf-8 -*-
-
-from . import model
-from . import wizar_report_igtf
