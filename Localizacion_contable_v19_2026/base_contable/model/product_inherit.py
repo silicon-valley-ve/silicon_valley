@@ -41,18 +41,47 @@ class Productos(models.Model):
     @api.constrains('taxes_id')
     def _check_single_tax(self):
         """ Valida que solo haya un impuesto en la lista al guardar. """
-        # Odoo salta la validación si se está instalando/configurando la contabilidad o módulos en segundo plano
-        """if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax'):
-            return"""
+        if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax'):
+            return
+
+        # Evita la validación si el proceso proviene de la creación o configuración de una compañía
+        frame = inspect.currentframe()
+        try:
+            while frame:
+                self_obj = frame.f_locals.get('self', None)
+                if self_obj and hasattr(self_obj, '_name') and self_obj._name == 'res.company':
+                    return
+                frame = frame.f_back
+        finally:
+            del frame
 
         for record in self:
-            # len(record.taxes_id) cuenta el número de registros en el Many2many
             if len(record.taxes_id) > 1:
-                # ❌ Lanza un error de validación, que automáticamente revierte (rollback)
-                #    cualquier cambio y previene el commit de datos incorrectos.
-                """raise ValidationError(
-                    _('Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde'))"""
                 self._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde")
+
+
+    @api.constrains('supplier_taxes_id')
+    def _check_single_tax_compras(self):
+        """ Valida que solo haya un impuesto en la lista al guardar. """
+        if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax'):
+            return
+
+        # Evita la validación si el proceso proviene de la creación o configuración de una compañía
+        frame = inspect.currentframe()
+        try:
+            while frame:
+                self_obj = frame.f_locals.get('self', None)
+                if self_obj and hasattr(self_obj, '_name') and self_obj._name == 'res.company':
+                    return
+                frame = frame.f_back
+        finally:
+            del frame
+
+        for record in self:
+            if len(record.supplier_taxes_id) > 1:
+                record._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de compras a este producto. Deje uno y guarde")
+
+
 
     @api.constrains('supplier_taxes_id')
     def _check_single_tax_compras(self):
