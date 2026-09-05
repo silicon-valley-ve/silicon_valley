@@ -669,6 +669,8 @@ class AccountMove(models.Model):
                     move.journal_id.name)
             #raise UserError(error_msg)
 
+    
+
 
 class  AccountMoveLine(models.Model):
     _inherit = 'account.move.line'
@@ -686,7 +688,8 @@ class  AccountMoveLine(models.Model):
         Valida que la cantidad y el precio unitario de la línea de la Nota de Crédito
         no superen los valores de la factura referenciada en el campo 'fact_afect' (número de factura).
         """
-        for line in self:
+        
+        for line in self.search([],order='id ASC'):
             move = line.move_id
             
             # 1. Aplicar solo a Notas de Crédito de Clientes (out_refund) 
@@ -729,10 +732,10 @@ class  AccountMoveLine(models.Model):
                     # 3. Validar Cantidad
                     original_qty = original_line.quantity
                     credit_note_qty = line.quantity
-                    #raise UserError(_("original_qty %s, credit_note_qty %s")%(original_qty,credit_note_qty))
+                    #raise UserError(_("original_qty %s, credit_note_qty %s")%(original_line.price_unit_ref,line.price_unit_ref))
                     
                     if credit_note_qty > original_qty:
-                        raise ValidationError(_(
+                        raise UserError(_(
                             "VALIDACIÓN SENIAT: La Cantidad (%s) de la línea '%s' no puede ser superior "
                             "a la cantidad de la factura afectada (%s) (Factura: %s)."
                         ) % (credit_note_qty, line.name, original_qty, original_invoice.name))
@@ -741,17 +744,19 @@ class  AccountMoveLine(models.Model):
                             #"a la cantidad de la factura afectada (%s) (Factura: %s)." % (credit_note_qty, line.name, original_qty, original_invoice.name))
                     
                     # 4. Validar Precio Unitario
-                    original_price = original_line.price_unit
-                    credit_note_price = line.price_unit
+                    aux=line.product_id.standard_price
+                    if aux!=line.price_unit:
+                        original_price = original_line.price_unit
+                        credit_note_price = line.price_unit
 
-                    if credit_note_price > original_price:
-                        raise ValidationError(_(
-                            "VALIDACIÓN SENIAT: El Precio Unitario (%.2f) de la línea '%s' no puede ser superior "
-                            "al precio unitario de la factura afectada (%.2f) (Factura: %s)."
-                        ) % (credit_note_price, line.name, original_price, original_invoice.name))
+                        if credit_note_price > original_price:
+                            raise UserError(_(
+                                "VALIDACIÓN SENIAT: El Precio Unitario (%.2f) de la línea '%s' no puede ser superior "
+                                "al precio unitario de la factura afectada (%.2f) (Factura: %s)."
+                            ) % (credit_note_price, line.name, original_price, original_invoice.name))
 
-                        #move._log_and_raise_fiscal_error("VALIDACIÓN SENIAT: El Precio Unitario (%.2f) de la línea '%s' no puede ser superior "
-                            #"al precio unitario de la factura afectada (%.2f) (Factura: %s)." % (credit_note_price, line.name, original_price, original_invoice.name))
+                            #move._log_and_raise_fiscal_error("VALIDACIÓN SENIAT: El Precio Unitario (%.2f) de la línea '%s' no puede ser superior "
+                                #"al precio unitario de la factura afectada (%.2f) (Factura: %s)." % (credit_note_price, line.name, original_price, original_invoice.name))
 
     # ESTA FUNCION VALIDA QUE NO SE AGREGUEN PRODUCTOS NUEVOS EN LA NC DE CLEINETES SI NO ESTAN EN LA FACTURA AFECTADA
     @api.constrains('product_id')
