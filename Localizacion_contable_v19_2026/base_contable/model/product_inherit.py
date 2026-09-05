@@ -46,7 +46,7 @@ class Productos(models.Model):
         #if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
             #return
 
-        if not self.env.context.get('install_mode') or self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
+        if not self.env.context.get('install_mode') or not self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
             for record in self:
                 if len(record.taxes_id) > 1:
                     raise UserError(_("🛑 Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde"))
@@ -58,7 +58,7 @@ class Productos(models.Model):
         """ Valida que solo haya un impuesto en la lista al guardar. """
         #if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
             #return
-        if not self.env.context.get('install_mode') or self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
+        if not self.env.context.get('install_mode') or not self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
             for record in self:
                 if len(record.supplier_taxes_id) > 1:
                     #record._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de compras a este producto. Deje uno y guarde")
