@@ -2,6 +2,7 @@
 
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError, ValidationError
+import inspect
 
 class Productos(models.Model):
     _inherit = 'product.template'
