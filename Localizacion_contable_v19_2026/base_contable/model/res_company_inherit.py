@@ -21,5 +21,6 @@ class ResCompany(models.Model):
     #journal_transi_id = fields.Many2one('account.journal')
     percentage_cli_igtf = fields.Float(default=3)
     price_ref_div_product = fields.Boolean()
+    validate_multi_tax_product = fields.Boolean(string="Validar que no se creen mas de 1 impuesto en productos",default=False)
    
     #uni_neg_id = fields.Many2one('stock.unidad.negocio')
