@@ -45,7 +45,7 @@ class Productos(models.Model):
         # Si viene por instalación, asistente de compañía o marca interna de salto, omitimos
         #if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
             #return
-        raise UserError(_("Valor: %s")%self.env.context.get('install_mode'))
+        #raise UserError(_("Valor: %s")%self.env.context.get('install_mode'))
         if not self.env.context.get('install_mode') or not self.env.context.get('skip_check_tax') or not self.env.context.get('create_company'):
             for record in self:
                 if len(record.taxes_id) > 1:
