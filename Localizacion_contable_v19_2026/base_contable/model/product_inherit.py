@@ -43,8 +43,8 @@ class Productos(models.Model):
     def _check_single_tax(self):
         """ Valida que solo haya un impuesto en la lista al guardar. """
         # Si viene por instalación, asistente de compañía o marca interna de salto, omitimos
-        if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
-            return
+        #if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
+            #return
 
         for record in self:
             if len(record.taxes_id) > 1:
@@ -55,8 +55,8 @@ class Productos(models.Model):
     @api.constrains('supplier_taxes_id')
     def _check_single_tax_compras(self):
         """ Valida que solo haya un impuesto en la lista al guardar. """
-        if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
-            return
+        #if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
+            #return
 
         for record in self:
             if len(record.supplier_taxes_id) > 1:
