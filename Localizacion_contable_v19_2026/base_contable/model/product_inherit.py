@@ -56,9 +56,6 @@ class Productos(models.Model):
                     record._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de compras a este producto. Deje uno y guarde")
 
     
-
-
-
     def _compute_tasa(self):
         lista=self.env['res.currency.rate'].search([('currency_id','=',self.env.company.currency_sec_id.id)],limit=1,order='name desc')
         if lista:
