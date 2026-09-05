@@ -24,3 +24,14 @@ class ResCompany(models.Model):
     validate_multi_tax_product = fields.Boolean(string="Validar que no se creen mas de 1 impuesto en productos",default=False)
    
     #uni_neg_id = fields.Many2one('stock.unidad.negocio')
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        # 1. Dejamos que Odoo cree la compañía con normalidad (durante este proceso estará en False y no bloqueará nada)
+        companies = super().create(vals_list)
+        
+        # 2. Una vez que la compañía ya está creada y guardada en la base de datos, 
+        #    forzamos a que el campo pase a True de forma automática.
+        companies.write({'validate_multi_tax_product': True})
+        
+        return companies
