@@ -41,15 +41,7 @@ class Productos(models.Model):
 
     @api.constrains('taxes_id')
     def _check_single_tax(self):
-        """ Valida que solo haya un impuesto en la lista al guardar. """
-        # Si es modo instalación o ya viene marcado para saltar, salimos
-        if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax'):
-            return
-
-        # Detección automática: Si Odoo está ejecutando la creación masiva o la plantilla contable de una compañía
-        # podemos verificar si el entorno viene de la creación de compañía revisando el contexto o la traza ligera.
-        if self.env.context.get('active_model') in ('res.company', 'res.config.settings', 'account.chart.template'):
-            return
+        
 
         for record in self:
             if len(record.taxes_id) > 1:
