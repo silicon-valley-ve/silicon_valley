@@ -46,10 +46,11 @@ class Productos(models.Model):
         #if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
             #return
 
-        for record in self:
-            if len(record.taxes_id) > 1:
-                raise UserError(_("🛑 Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde"))
-                #self._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde")
+        if not self.env.context.get('install_mode') or self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
+            for record in self:
+                if len(record.taxes_id) > 1:
+                    raise UserError(_("🛑 Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde"))
+                    #self._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde")
 
 
     @api.constrains('supplier_taxes_id')
