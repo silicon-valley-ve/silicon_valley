@@ -48,7 +48,8 @@ class Productos(models.Model):
 
         for record in self:
             if len(record.taxes_id) > 1:
-                self._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde")
+                raise UserError(_("🛑 Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde"))
+                #self._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde")
 
 
     @api.constrains('supplier_taxes_id')
@@ -59,7 +60,8 @@ class Productos(models.Model):
 
         for record in self:
             if len(record.supplier_taxes_id) > 1:
-                record._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de compras a este producto. Deje uno y guarde")
+                #record._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de compras a este producto. Deje uno y guarde")
+                raise UserError(_("🛑 Error de Validación: Solo se puede asignar una alícuota de compras a este producto. Deje uno y guarde"))
 
 
 
