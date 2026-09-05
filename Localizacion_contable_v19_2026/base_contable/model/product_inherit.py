@@ -41,25 +41,19 @@ class Productos(models.Model):
 
     @api.constrains('taxes_id')
     def _check_single_tax(self):
-        
-
         for record in self:
-            if len(record.taxes_id) > 1:
-                self._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde")
+            if record.env.company.validate_multi_tax_product==True:
+                if len(record.taxes_id) > 1:
+                    self._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de ventas a este producto. Deje uno y guarde")
 
 
     @api.constrains('supplier_taxes_id')
     def _check_single_tax_compras(self):
-        """ Valida que solo haya un impuesto en la lista al guardar. """
-        if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax'):
-            return
-
-        if self.env.context.get('active_model') in ('res.company', 'res.config.settings', 'account.chart.template'):
-            return
-
+        
         for record in self:
-            if len(record.supplier_taxes_id) > 1:
-                record._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de compras a este producto. Deje uno y guarde")
+            if record.env.company.validate_multi_tax_product==True:
+                if len(record.supplier_taxes_id) > 1:
+                    record._log_and_raise_fiscal_error("🛑 Error de Validación: Solo se puede asignar una alícuota de compras a este producto. Deje uno y guarde")
 
     
 
