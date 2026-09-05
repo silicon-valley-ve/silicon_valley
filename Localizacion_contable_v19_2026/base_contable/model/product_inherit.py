@@ -42,24 +42,9 @@ class Productos(models.Model):
     @api.constrains('taxes_id')
     def _check_single_tax(self):
         """ Valida que solo haya un impuesto en la lista al guardar. """
-        if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax'):
+        # Si viene por instalación, asistente de compañía o marca interna de salto, omitimos
+        if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
             return
-
-        # Evita la validación si el proceso proviene de la creación de compañía o configuración fiscal
-        frame = inspect.currentframe()
-        try:
-            while frame:
-                self_obj = frame.f_locals.get('self', None)
-                if self_obj and hasattr(self_obj, '_name'):
-                    if self_obj._name in ('res.company', 'res.config.settings', 'account.chart.template'):
-                        return
-                # También podemos revisar si el nombre de la función en la pila pertenece a la instalación de impuestos
-                code = frame.f_code
-                if any(kWord in code.co_name for kWord in ('load_taxes', '_default_fiscal_position', 'create_chart')):
-                    return
-                frame = frame.f_back
-        finally:
-            del frame
 
         for record in self:
             if len(record.taxes_id) > 1:
@@ -69,23 +54,8 @@ class Productos(models.Model):
     @api.constrains('supplier_taxes_id')
     def _check_single_tax_compras(self):
         """ Valida que solo haya un impuesto en la lista al guardar. """
-        if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax'):
+        if self.env.context.get('install_mode') or self.env.context.get('skip_check_tax') or self.env.context.get('create_company'):
             return
-
-        # Evita la validación si el proceso proviene de la creación de compañía o configuración fiscal
-        frame = inspect.currentframe()
-        try:
-            while frame:
-                self_obj = frame.f_locals.get('self', None)
-                if self_obj and hasattr(self_obj, '_name'):
-                    if self_obj._name in ('res.company', 'res.config.settings', 'account.chart.template'):
-                        return
-                code = frame.f_code
-                if any(kWord in code.co_name for kWord in ('load_taxes', '_default_fiscal_position', 'create_chart')):
-                    return
-                frame = frame.f_back
-        finally:
-            del frame
 
         for record in self:
             if len(record.supplier_taxes_id) > 1:
