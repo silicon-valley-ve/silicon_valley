@@ -351,7 +351,7 @@ class AccountMove(models.Model):
 
                 "ExchangeRate": exchange_rate,
                 "SystemReference": move.name or "",
-                "Note1": note1_clean, #f"Documento emitido desde Odoo: {move.name}",
+                "Note1": 'NOTA: '+note1_clean, #f"Documento emitido desde Odoo: {move.name}",
                 "Note2": "",
                 "Note3": "",
                 "Extra": {},
