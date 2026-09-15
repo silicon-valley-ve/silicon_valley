@@ -6,6 +6,7 @@ import requests
 
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
+from odoo.tools import html2plaintext
 
 _logger = logging.getLogger(__name__)
 
@@ -279,6 +280,11 @@ class AccountMove(models.Model):
                 igtf_amount_conv = round(igtf_amount_main * exchange_rate, 2)
                 grand_total_conv = round(grand_total * exchange_rate, 2)
 
+            # Limpiar HTML del campo narration para Note1
+            note1_clean = ""
+            if move.narration:
+                note1_clean = html2plaintext(move.narration).strip()
+
             # 6. Payload Final hacia Unidigital
             payload = {
                 "SerieStrongId": company.seriestrongid,
@@ -345,7 +351,7 @@ class AccountMove(models.Model):
 
                 "ExchangeRate": exchange_rate,
                 "SystemReference": move.name or "",
-                "Note1": move.narration, #f"Documento emitido desde Odoo: {move.name}",
+                "Note1": note1_clean, #f"Documento emitido desde Odoo: {move.name}",
                 "Note2": "",
                 "Note3": "",
                 "Extra": {},
