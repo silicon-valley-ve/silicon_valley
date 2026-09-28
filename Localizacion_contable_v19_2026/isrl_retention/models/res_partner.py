@@ -21,4 +21,8 @@ class Partners(models.Model):
     		self.sale_isrl_id=self.env.company.journal_ret_islr_aux_id.id
     		self.account_isrl_payable_id=self.env.company.account_ret_islr_payable_aux_id.id
     		self.account_isrl_receivable_id=self.env.company.account_ret_islr_receivable_aux_id.id
+    	else:
+    		self.sale_isrl_id = False
+    		self.account_isrl_payable_id = False
+    		self.account_isrl_receivable_id = False
     
